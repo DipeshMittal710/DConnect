@@ -1,783 +1,389 @@
 /* ─────────────────────────────────────────────────────────────────────────
    GLOBAL
 ───────────────────────────────────────────────────────────────────────── */
-
 .meetVideoContainer {
-    position: relative;
-    height: 100vh;
-    background: rgb(1, 4, 48);
-    overflow: hidden;
+    position: relative; height: 100vh;
+    background: rgb(1, 4, 48); overflow: hidden;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
    LOBBY
 ───────────────────────────────────────────────────────────────────────── */
-
 .lobbyContainer {
-    height: 100vh;
-    background: rgb(1, 4, 48);
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    min-height: 100vh; background: rgb(1, 4, 48);
+    display: flex; align-items: center; justify-content: center;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    padding: 16px; box-sizing: border-box;
 }
-
 .lobbyCard {
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.09);
-    border-radius: 20px;
-    padding: 36px 40px;
-    width: 420px;
-    display: flex;
-    flex-direction: column;
-    gap: 24px;
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.09);
+    border-radius: 20px; padding: 36px 40px;
+    width: 100%; max-width: 440px;
+    display: flex; flex-direction: column; gap: 24px;
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
 }
-
-.lobbyBrand h1 {
-    color: #ffffff;
-    font-size: 1.75rem;
-    font-weight: 700;
-    margin: 0 0 6px 0;
-    letter-spacing: -0.3px;
-}
-
-.lobbyBrand p {
-    color: rgba(255, 255, 255, 0.4);
-    font-size: 0.875rem;
-    margin: 0;
-}
-
+.lobbyBrand h1 { color:#fff; font-size:1.75rem; font-weight:700; margin:0 0 6px; letter-spacing:-0.3px; }
+.lobbyBrand p  { color:rgba(255,255,255,0.4); font-size:0.875rem; margin:0; }
 .lobbyPreview {
-    position: relative;
-    background: rgba(0, 0, 0, 0.45);
-    border-radius: 14px;
-    overflow: hidden;
-    aspect-ratio: 16 / 9;
-    border: 1px solid rgba(255, 255, 255, 0.07);
+    position: relative; background: rgba(0,0,0,0.45);
+    border-radius: 14px; overflow: hidden;
+    aspect-ratio: 16/9; border: 1px solid rgba(255,255,255,0.07);
 }
-
-.lobbyPreview video {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-    border-radius: 14px;
-}
-
+.lobbyPreview video { width:100%; height:100%; object-fit:cover; display:block; border-radius:14px; }
 .lobbyPreviewLabel {
-    position: absolute;
-    bottom: 10px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(0, 0, 0, 0.55);
-    color: rgba(255, 255, 255, 0.65);
-    font-size: 0.72rem;
-    padding: 3px 12px;
-    border-radius: 20px;
-    white-space: nowrap;
+    position:absolute; bottom:10px; left:50%; transform:translateX(-50%);
+    background:rgba(0,0,0,0.55); color:rgba(255,255,255,0.65);
+    font-size:0.72rem; padding:3px 12px; border-radius:20px; white-space:nowrap;
 }
-
-.lobbyForm {
-    display: flex;
-    flex-direction: column;
-}
+.lobbyForm { display:flex; flex-direction:column; }
 
 /* ─────────────────────────────────────────────────────────────────────────
-   TOP NAVBAR
+   NAVBAR
 ───────────────────────────────────────────────────────────────────────── */
-
 .navbar {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 58px;
-    background: rgba(0, 0, 0, 0.55);
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 22px;
-    box-sizing: border-box;
-    z-index: 200;
+    position:absolute; top:0; left:0; width:100%; height:58px;
+    background:rgba(0,0,0,0.55); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+    border-bottom:1px solid rgba(255,255,255,0.08);
+    display:flex; align-items:center; justify-content:space-between;
+    padding:0 22px; box-sizing:border-box; z-index:200;
 }
-
-.navLeft {
-    display: flex;
-    align-items: center;
-    gap: 12px;
+.navLeft  { display:flex; align-items:center; gap:12px; }
+.navBrand { color:#fff; font-size:1.1rem; font-weight:700; letter-spacing:-0.2px; }
+.navRoom  {
+    color:rgba(255,255,255,0.5); font-size:0.8rem;
+    background:rgba(255,255,255,0.07); padding:3px 10px;
+    border-radius:20px; border:1px solid rgba(255,255,255,0.08);
 }
-
-.navBrand {
-    color: #ffffff;
-    font-size: 1.1rem;
-    font-weight: 700;
-    letter-spacing: -0.2px;
-}
-
-.navRoom {
-    color: rgba(255, 255, 255, 0.5);
-    font-size: 0.8rem;
-    background: rgba(255, 255, 255, 0.07);
-    padding: 3px 10px;
-    border-radius: 20px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
 .navCenter {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
+    display:flex; align-items:center; gap:10px;
+    position:absolute; left:50%; transform:translateX(-50%);
 }
-
-.navStatus {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    color: rgba(255, 255, 255, 0.8);
-    font-size: 0.82rem;
-}
-
+.navStatus { display:flex; align-items:center; gap:6px; color:rgba(255,255,255,0.8); font-size:0.82rem; }
 .dotConnected {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: #22c55e;
-    flex-shrink: 0;
-    animation: pulse 2s ease-in-out infinite;
+    width:8px; height:8px; border-radius:50%; background:#22c55e;
+    flex-shrink:0; animation:pulse 2s ease-in-out infinite;
 }
-
-.dotConnecting {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: #f59e0b;
-    flex-shrink: 0;
-}
-
+.dotConnecting { width:8px; height:8px; border-radius:50%; background:#f59e0b; flex-shrink:0; }
 @keyframes pulse {
-    0%, 100% { box-shadow: 0 0 0 0   rgba(34, 197, 94, 0.5); }
-    50%       { box-shadow: 0 0 0 6px rgba(34, 197, 94, 0);   }
+    0%,100% { box-shadow:0 0 0 0   rgba(34,197,94,0.5); }
+    50%      { box-shadow:0 0 0 6px rgba(34,197,94,0);   }
 }
-
-.navDivider {
-    color: rgba(255, 255, 255, 0.2);
-    font-size: 0.75rem;
-}
-
-.navTimer {
-    font-family: 'Courier New', Courier, monospace;
-    color: rgba(255, 255, 255, 0.85);
-    font-size: 0.88rem;
-    letter-spacing: 1.5px;
-}
-
-.navRight {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.navParticipants {
-    color: rgba(255, 255, 255, 0.65);
-    font-size: 0.8rem;
-    margin-right: 4px;
-}
-
+.navDivider { color:rgba(255,255,255,0.2); font-size:0.75rem; }
+.navTimer   { font-family:'Courier New',Courier,monospace; color:rgba(255,255,255,0.85); font-size:0.88rem; letter-spacing:1.5px; }
+.navRight   { display:flex; align-items:center; gap:8px; }
+.navParticipants { color:rgba(255,255,255,0.65); font-size:0.8rem; margin-right:4px; }
 .navBtn {
-    background: rgba(255, 255, 255, 0.09);
-    color: rgba(255, 255, 255, 0.85);
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    padding: 5px 14px;
-    border-radius: 20px;
-    cursor: pointer;
-    font-size: 0.8rem;
-    font-family: inherit;
-    transition: background 0.15s, border-color 0.15s;
-    white-space: nowrap;
+    background:rgba(255,255,255,0.09); color:rgba(255,255,255,0.85);
+    border:1px solid rgba(255,255,255,0.14); padding:5px 14px;
+    border-radius:20px; cursor:pointer; font-size:0.8rem; font-family:inherit;
+    transition:background 0.15s, border-color 0.15s; white-space:nowrap;
 }
-
-.navBtn:hover       { background: rgba(255,255,255,0.18); border-color: rgba(255,255,255,0.3); }
-.navBtnCopied       { background: rgba(34,197,94,0.18);   border-color: rgba(34,197,94,0.4);  color: #86efac; }
-.navBtnActive       { background: rgba(255,255,255,0.20); border-color: rgba(255,255,255,0.35); }
+.navBtn:hover   { background:rgba(255,255,255,0.18); border-color:rgba(255,255,255,0.3); }
+.navBtnCopied   { background:rgba(34,197,94,0.18); border-color:rgba(34,197,94,0.4); color:#86efac; }
+.navBtnActive   { background:rgba(255,255,255,0.20); border-color:rgba(255,255,255,0.35); }
 
 /* ─────────────────────────────────────────────────────────────────────────
-   TOAST NOTIFICATIONS  (new)
+   TOASTS
 ───────────────────────────────────────────────────────────────────────── */
-
 .toastContainer {
-    position: absolute;
-    top: 68px;
-    left: 50%;
-    transform: translateX(-50%);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    z-index: 500;
-    pointer-events: none;
+    position:absolute; top:68px; left:50%; transform:translateX(-50%);
+    display:flex; flex-direction:column; align-items:center;
+    gap:8px; z-index:500; pointer-events:none;
 }
-
 .toast {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: rgba(10, 14, 55, 0.92);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    color: rgba(255, 255, 255, 0.9);
-    font-size: 0.82rem;
-    font-weight: 500;
-    padding: 8px 18px;
-    border-radius: 24px;
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
-    white-space: nowrap;
-    animation: toastIn 0.28s ease, toastOut 0.35s ease 3.1s forwards;
+    display:flex; align-items:center; gap:8px;
+    background:rgba(10,14,55,0.92); border:1px solid rgba(255,255,255,0.1);
+    color:rgba(255,255,255,0.9); font-size:0.82rem; font-weight:500;
+    padding:8px 18px; border-radius:24px;
+    backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+    box-shadow:0 4px 18px rgba(0,0,0,0.35); white-space:nowrap;
+    animation:toastIn 0.28s ease, toastOut 0.35s ease 3.1s forwards;
 }
-
-/* coloured left-border accent per type */
-.toast_join  { border-color: rgba(34,  197, 94,  0.35); }
-.toast_leave { border-color: rgba(239, 68,  68,  0.35); }
-.toast_hand  { border-color: rgba(251, 191, 36,  0.4);  }
-
-.toastDot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    flex-shrink: 0;
-}
-
-@keyframes toastIn {
-    from { opacity: 0; transform: translateY(-10px) scale(0.94); }
-    to   { opacity: 1; transform: translateY(0)     scale(1);    }
-}
-@keyframes toastOut {
-    from { opacity: 1; transform: translateY(0)    scale(1);    }
-    to   { opacity: 0; transform: translateY(-8px) scale(0.94); }
-}
+.toast_join  { border-color:rgba(34,197,94,0.35);  }
+.toast_leave { border-color:rgba(239,68,68,0.35);  }
+.toast_hand  { border-color:rgba(251,191,36,0.4);  }
+.toastDot    { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+@keyframes toastIn  { from{opacity:0;transform:translateY(-10px) scale(0.94)} to{opacity:1;transform:translateY(0) scale(1)} }
+@keyframes toastOut { from{opacity:1;transform:translateY(0) scale(1)} to{opacity:0;transform:translateY(-8px) scale(0.94)} }
 
 /* ─────────────────────────────────────────────────────────────────────────
    CONTROL BAR
 ───────────────────────────────────────────────────────────────────────── */
-
 .buttonContainers {
-    position: absolute;
-    width: 100%;
-    bottom: 0;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 20px 0 24px;
-    z-index: 100;
-    background: linear-gradient(to top, rgba(1, 4, 48, 0.88) 0%, transparent 100%);
+    position:absolute; width:100%; bottom:0;
+    display:flex; justify-content:center; align-items:center;
+    padding:20px 0 24px; z-index:100;
+    background:linear-gradient(to top, rgba(1,4,48,0.88) 0%, transparent 100%);
 }
-
 .controlBar {
-    background: rgba(8, 12, 55, 0.88);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 60px;
-    padding: 10px 22px;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    background:rgba(8,12,55,0.88); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px);
+    border:1px solid rgba(255,255,255,0.1); border-radius:60px;
+    padding:10px 22px; display:flex; align-items:center; gap:4px;
+    box-shadow:0 8px 32px rgba(0,0,0,0.5);
 }
-
-/* default control button */
-.controlBtn {
-    color: rgba(255, 255, 255, 0.82) !important;
-    width: 48px;
-    height: 48px;
-    transition: background 0.15s !important;
-}
-
-.controlBtn:hover {
-    background: rgba(255, 255, 255, 0.1) !important;
-}
-
-.controlBtn svg { font-size: 1.4rem; }
-
-/* active state (reactions picker open) */
-.controlBtnActive {
-    background: rgba(255, 255, 255, 0.16) !important;
-    color: #ffffff !important;
-}
-
-/* red end-call button */
-.endCallBtn {
-    background: #ef4444 !important;
-    color: #ffffff !important;
-    width: 52px;
-    height: 52px;
-    margin: 0 4px;
-    transition: background 0.15s !important;
-}
-
-.endCallBtn:hover { background: #dc2626 !important; }
-.endCallBtn svg   { font-size: 1.4rem; }
-
-/* ── NEW: Raise Hand active state ───────────────────────────────────── */
-.handBtn {
-    background: rgba(251, 191, 36, 0.18) !important;
-    color: #fbbf24 !important;
-    box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.3) !important;
-}
+.controlBtn        { color:rgba(255,255,255,0.82) !important; width:48px; height:48px; transition:background 0.15s !important; }
+.controlBtn:hover  { background:rgba(255,255,255,0.1) !important; }
+.controlBtn svg    { font-size:1.4rem; }
+.controlBtnActive  { background:rgba(255,255,255,0.16) !important; color:#fff !important; }
+.endCallBtn        { background:#ef4444 !important; color:#fff !important; width:52px; height:52px; margin:0 4px; transition:background 0.15s !important; }
+.endCallBtn:hover  { background:#dc2626 !important; }
+.endCallBtn svg    { font-size:1.4rem; }
+.handBtn           { background:rgba(251,191,36,0.18) !important; color:#fbbf24 !important; box-shadow:0 0 0 2px rgba(251,191,36,0.3) !important; }
 
 /* ─────────────────────────────────────────────────────────────────────────
-   REACTIONS  (new)
+   REACTIONS
 ───────────────────────────────────────────────────────────────────────── */
-
-.reactionArea {
-    position: relative;
-}
-
-/* pill picker above the button */
+.reactionArea { position:relative; }
 .reactionPicker {
-    position: absolute;
-    bottom: 62px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(8, 12, 55, 0.96);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 40px;
-    padding: 8px 12px;
-    display: flex;
-    gap: 2px;
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
-    white-space: nowrap;
-    animation: pickerPop 0.18s ease;
+    position:absolute; bottom:62px; left:50%; transform:translateX(-50%);
+    background:rgba(8,12,55,0.96); border:1px solid rgba(255,255,255,0.12);
+    border-radius:40px; padding:8px 12px; display:flex; gap:2px;
+    backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
+    box-shadow:0 8px 28px rgba(0,0,0,0.45); white-space:nowrap;
+    animation:pickerPop 0.18s ease;
 }
-
 @keyframes pickerPop {
-    from { opacity: 0; transform: translateX(-50%) scale(0.82); }
-    to   { opacity: 1; transform: translateX(-50%) scale(1);    }
+    from{opacity:0;transform:translateX(-50%) scale(0.82)}
+    to  {opacity:1;transform:translateX(-50%) scale(1)}
 }
-
-.reactionBtn {
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    font-size: 1.5rem;
-    padding: 4px 8px;
-    border-radius: 10px;
-    transition: transform 0.12s, background 0.12s;
-    line-height: 1;
-}
-
-.reactionBtn:hover {
-    transform: scale(1.35);
-    background: rgba(255, 255, 255, 0.1);
-}
-
-/* floating emoji that animates upward */
-.floatingReaction {
-    position: absolute;
-    bottom: 90px;
-    font-size: 2.4rem;
-    animation: floatUp 3.2s ease-out forwards;
-    pointer-events: none;
-    z-index: 400;
-    line-height: 1;
-    filter: drop-shadow(0 2px 8px rgba(0,0,0,0.3));
-}
-
+.reactionBtn { background:transparent; border:none; cursor:pointer; font-size:1.5rem; padding:4px 8px; border-radius:10px; transition:transform 0.12s,background 0.12s; line-height:1; }
+.reactionBtn:hover { transform:scale(1.35); background:rgba(255,255,255,0.1); }
+.floatingReaction  { position:absolute; bottom:90px; font-size:2.4rem; animation:floatUp 3.2s ease-out forwards; pointer-events:none; z-index:400; line-height:1; filter:drop-shadow(0 2px 8px rgba(0,0,0,0.3)); }
 @keyframes floatUp {
-    0%   { transform: translateY(0)     scale(0.7);  opacity: 1; }
-    15%  { transform: translateY(-24px) scale(1.3);  opacity: 1; }
-    100% { transform: translateY(-68vh) scale(0.85); opacity: 0; }
+    0%   { transform:translateY(0)     scale(0.7);  opacity:1; }
+    15%  { transform:translateY(-24px) scale(1.3);  opacity:1; }
+    100% { transform:translateY(-68vh) scale(0.85); opacity:0; }
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
-   LOCAL VIDEO  ("You" PIP)
+   LOCAL VIDEO
 ───────────────────────────────────────────────────────────────────────── */
-
-.localVideoWrapper {
-    position: absolute;
-    bottom: 10vh;
-    left: 16px;
-    display: flex;
-    z-index: 50;
-}
-
+.localVideoWrapper { position:absolute; bottom:10vh; left:16px; display:flex; z-index:50; }
 .meetUserVideo {
-    height: 20vh;
-    width: auto;
-    border-radius: 16px;
-    display: block;
-    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.65),
-                0 0 0 2px rgba(255, 255, 255, 0.08);
-    transition: box-shadow 0.2s ease;
+    height:20vh; width:auto; border-radius:16px; display:block;
+    box-shadow:0 8px 28px rgba(0,0,0,0.65), 0 0 0 2px rgba(255,255,255,0.08);
+    transition:box-shadow 0.2s ease;
 }
-
-/* ── NEW: speaking ring on local video ──────────────────────────────── */
-.speakingVideo {
-    box-shadow: 0 0 0 3px #3b82f6,
-                0 0 22px rgba(59, 130, 246, 0.45),
-                0 8px 28px rgba(0, 0, 0, 0.65) !important;
-}
-
+.speakingVideo { box-shadow:0 0 0 3px #3b82f6, 0 0 22px rgba(59,130,246,0.45), 0 8px 28px rgba(0,0,0,0.65) !important; }
 .youLabel {
-    position: absolute;
-    bottom: 8px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(0, 0, 0, 0.6);
-    color: rgba(255, 255, 255, 0.9);
-    font-size: 0.7rem;
-    font-weight: 500;
-    padding: 2px 10px;
-    border-radius: 20px;
-    pointer-events: none;
-    white-space: nowrap;
-    letter-spacing: 0.3px;
+    position:absolute; bottom:8px; left:50%; transform:translateX(-50%);
+    background:rgba(0,0,0,0.6); color:rgba(255,255,255,0.9);
+    font-size:0.7rem; font-weight:500; padding:2px 10px;
+    border-radius:20px; pointer-events:none; white-space:nowrap; letter-spacing:0.3px;
 }
-
-/* ── NEW: hand badge on local PIP ───────────────────────────────────── */
 .handBadgeLocal {
-    position: absolute;
-    top: 6px;
-    right: 6px;
-    font-size: 1.1rem;
-    background: rgba(0, 0, 0, 0.6);
-    border-radius: 50%;
-    width: 30px;
-    height: 30px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    animation: handPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    position:absolute; top:6px; right:6px; font-size:1.1rem;
+    background:rgba(0,0,0,0.6); border-radius:50%; width:30px; height:30px;
+    display:flex; align-items:center; justify-content:center;
+    animation:handPop 0.4s cubic-bezier(0.34,1.56,0.64,1);
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
    EMPTY STATE
 ───────────────────────────────────────────────────────────────────────── */
-
 .emptyState {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    text-align: center;
-    pointer-events: none;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 10px;
+    position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+    text-align:center; pointer-events:none;
+    display:flex; flex-direction:column; align-items:center; gap:10px; width:90%;
 }
-
 .emptyPulse {
-    width: 70px;
-    height: 70px;
-    border-radius: 50%;
-    background: rgba(59, 130, 246, 0.1);
-    border: 2px solid rgba(59, 130, 246, 0.25);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    animation: emptyPulse 2.8s ease-in-out infinite;
-    margin-bottom: 4px;
+    width:70px; height:70px; border-radius:50%;
+    background:rgba(59,130,246,0.1); border:2px solid rgba(59,130,246,0.25);
+    display:flex; align-items:center; justify-content:center;
+    animation:emptyPulse 2.8s ease-in-out infinite; margin-bottom:4px;
 }
-
-.emptyPulse::before {
-    content: '👥';
-    font-size: 1.6rem;
-}
-
+.emptyPulse::before { content:'👥'; font-size:1.6rem; }
 @keyframes emptyPulse {
-    0%, 100% { transform: scale(1);    opacity: 0.5; }
-    50%       { transform: scale(1.08); opacity: 1;   }
+    0%,100% { transform:scale(1);    opacity:0.5; }
+    50%     { transform:scale(1.08); opacity:1;   }
 }
-
-.emptyTitle {
-    color: rgba(255, 255, 255, 0.4);
-    font-size: 1rem;
-    font-weight: 500;
-    margin: 0;
-}
-
-.emptySub {
-    color: rgba(255, 255, 255, 0.22);
-    font-size: 0.8rem;
-    margin: 0;
-}
+.emptyTitle { color:rgba(255,255,255,0.4); font-size:1rem; font-weight:500; margin:0; }
+.emptySub   { color:rgba(255,255,255,0.22); font-size:0.8rem; margin:0; }
 
 /* ─────────────────────────────────────────────────────────────────────────
-   PARTICIPANT TILES  (conference grid)
+   PARTICIPANT TILES
 ───────────────────────────────────────────────────────────────────────── */
-
 .conferenceView {
-    display: flex;
-    flex-wrap: wrap;
-    padding: 68px 12px 12px;
-    gap: 10px;
-    align-content: flex-start;
+    display:flex; flex-wrap:wrap;
+    padding:68px 12px 12px; gap:10px; align-content:flex-start;
 }
-
 .participantTile {
-    position: relative;
-    border-radius: 14px;
-    overflow: hidden;
-    background: rgba(255, 255, 255, 0.03);
-    border: 2px solid transparent;       /* reserve space; border added when speaking */
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    position:relative; border-radius:14px; overflow:hidden;
+    background:rgba(255,255,255,0.03); border:2px solid transparent;
+    box-shadow:0 4px 16px rgba(0,0,0,0.4);
+    transition:border-color 0.2s ease, box-shadow 0.2s ease;
 }
-
-.participantTile video {
-    width: 40vw;
-    height: 22vh;
-    min-width: 30vw;
-    display: block;
-    object-fit: cover;
-}
-
-/* ── NEW: speaking ring on remote tile ──────────────────────────────── */
-.speakingTile {
-    border-color: #3b82f6 !important;
-    box-shadow: 0 0 0 1px #3b82f6,
-                0 0 20px rgba(59, 130, 246, 0.35),
-                0 4px 16px rgba(0, 0, 0, 0.4) !important;
-}
-
-/* ── NEW: raised-hand badge on remote tile ──────────────────────────── */
+.participantTile video { width:40vw; height:22vh; min-width:30vw; display:block; object-fit:cover; }
+.speakingTile { border-color:#3b82f6 !important; box-shadow:0 0 0 1px #3b82f6, 0 0 20px rgba(59,130,246,0.35), 0 4px 16px rgba(0,0,0,0.4) !important; }
 .handBadge {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    font-size: 1.2rem;
-    background: rgba(0, 0, 0, 0.62);
-    border-radius: 50%;
-    width: 34px;
-    height: 34px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    animation: handPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    position:absolute; top:8px; right:8px; font-size:1.2rem;
+    background:rgba(0,0,0,0.62); border-radius:50%; width:34px; height:34px;
+    display:flex; align-items:center; justify-content:center;
+    animation:handPop 0.4s cubic-bezier(0.34,1.56,0.64,1);
 }
-
 @keyframes handPop {
-    0%   { transform: scale(0);   opacity: 0; }
-    60%  { transform: scale(1.3); opacity: 1; }
-    100% { transform: scale(1);   opacity: 1; }
+    0%   { transform:scale(0);   opacity:0; }
+    60%  { transform:scale(1.3); opacity:1; }
+    100% { transform:scale(1);   opacity:1; }
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
    CHAT PANEL
 ───────────────────────────────────────────────────────────────────────── */
-
 .chatRoom {
-    position: absolute;
-    top: 58px;
-    right: 0;
-    height: calc(100vh - 58px);
-    width: 300px;
-    background: rgba(5, 7, 42, 0.97);
-    border-left: 1px solid rgba(255, 255, 255, 0.08);
-    display: flex;
-    flex-direction: column;
-    z-index: 150;
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+    position:absolute; top:58px; right:0;
+    height:calc(100vh - 58px); width:300px;
+    background:rgba(5,7,42,0.97); border-left:1px solid rgba(255,255,255,0.08);
+    display:flex; flex-direction:column; z-index:150;
+    backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
 }
-
-.chatContainer {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    overflow: hidden;
-}
-
+.chatContainer { display:flex; flex-direction:column; height:100%; overflow:hidden; }
 .chatHeader {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 16px 18px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
-    flex-shrink: 0;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:16px 18px; border-bottom:1px solid rgba(255,255,255,0.07); flex-shrink:0;
 }
-
-.chatTitle {
-    color: #ffffff;
-    font-size: 0.95rem;
-    font-weight: 600;
-    letter-spacing: 0.1px;
-}
-
+.chatTitle    { color:#fff; font-size:0.95rem; font-weight:600; letter-spacing:0.1px; }
 .chatCloseBtn {
-    background: rgba(255, 255, 255, 0.07);
-    color: rgba(255, 255, 255, 0.55);
-    border: none;
-    width: 26px;
-    height: 26px;
-    border-radius: 50%;
-    cursor: pointer;
-    font-size: 0.7rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background 0.15s, color 0.15s;
-    font-family: inherit;
+    background:rgba(255,255,255,0.07); color:rgba(255,255,255,0.55);
+    border:none; width:26px; height:26px; border-radius:50%; cursor:pointer;
+    font-size:0.7rem; display:flex; align-items:center; justify-content:center;
+    transition:background 0.15s, color 0.15s; font-family:inherit;
 }
-
-.chatCloseBtn:hover { background: rgba(255,255,255,0.15); color: #ffffff; }
-
+.chatCloseBtn:hover { background:rgba(255,255,255,0.15); color:#fff; }
 .chattingDisplay {
-    flex: 1;
-    overflow-y: auto;
-    padding: 14px 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    scrollbar-width: thin;
-    scrollbar-color: rgba(255,255,255,0.08) transparent;
+    flex:1; overflow-y:auto; padding:14px 12px;
+    display:flex; flex-direction:column; gap:10px;
+    scrollbar-width:thin; scrollbar-color:rgba(255,255,255,0.08) transparent;
 }
-
-.chattingDisplay::-webkit-scrollbar       { width: 4px; }
-.chattingDisplay::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
-
-.noMessages {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-    gap: 6px;
-}
-
-.noMessages span { font-size: 1.8rem; opacity: 0.4; }
-.noMessages p    { color: rgba(255,255,255,0.28); font-size: 0.82rem; margin: 0; text-align: center; }
-
-.messageWrapper {
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-    max-width: 88%;
-}
-
-.ownMessage   { align-self: flex-end;   align-items: flex-end;   }
-.otherMessage { align-self: flex-start; align-items: flex-start; }
-
-.messageSender {
-    color: rgba(255,255,255,0.42);
-    font-size: 0.7rem;
-    font-weight: 500;
-    margin: 0;
-    padding: 0 4px;
-}
-
-.messageBubble { padding: 8px 12px; border-radius: 16px; }
-.ownMessage   .messageBubble { background: #3b82f6;               border-bottom-right-radius: 4px; }
-.otherMessage .messageBubble { background: rgba(255,255,255,0.1); border-bottom-left-radius:  4px; }
-
-.messageText {
-    color: #ffffff;
-    font-size: 0.855rem;
-    margin: 0;
-    line-height: 1.4;
-    word-break: break-word;
-}
-
-.messageTime {
-    color: rgba(255,255,255,0.28);
-    font-size: 0.66rem;
-    margin: 0;
-    padding: 0 4px;
-}
-
+.chattingDisplay::-webkit-scrollbar       { width:4px; }
+.chattingDisplay::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.1); border-radius:2px; }
+.noMessages { display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; gap:6px; }
+.noMessages span { font-size:1.8rem; opacity:0.4; }
+.noMessages p    { color:rgba(255,255,255,0.28); font-size:0.82rem; margin:0; text-align:center; }
+.messageWrapper  { display:flex; flex-direction:column; gap:3px; max-width:88%; }
+.ownMessage      { align-self:flex-end;   align-items:flex-end;   }
+.otherMessage    { align-self:flex-start; align-items:flex-start; }
+.messageSender   { color:rgba(255,255,255,0.42); font-size:0.7rem; font-weight:500; margin:0; padding:0 4px; }
+.messageBubble   { padding:8px 12px; border-radius:16px; }
+.ownMessage   .messageBubble { background:#3b82f6;               border-bottom-right-radius:4px; }
+.otherMessage .messageBubble { background:rgba(255,255,255,0.1); border-bottom-left-radius:4px;  }
+.messageText  { color:#fff; font-size:0.855rem; margin:0; line-height:1.4; word-break:break-word; }
+.messageTime  { color:rgba(255,255,255,0.28); font-size:0.66rem; margin:0; padding:0 4px; }
 .chattingArea {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 12px 10px 16px;
-    border-top: 1px solid rgba(255, 255, 255, 0.07);
-    flex-shrink: 0;
+    display:flex; align-items:center; gap:8px;
+    padding:12px 10px 16px; border-top:1px solid rgba(255,255,255,0.07); flex-shrink:0;
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
-   LOBBY DEVICE TOGGLES  (new)
+   LOBBY DEVICE TOGGLES
 ───────────────────────────────────────────────────────────────────────── */
-
-/* Camera-off dark overlay inside the preview box */
 .lobbyVideoOffOverlay {
-    position: absolute;
-    inset: 0;
-    background: rgba(1, 4, 48, 0.92);
-    border-radius: 14px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    z-index: 2;
+    position:absolute; inset:0; background:rgba(1,4,48,0.92); border-radius:14px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:10px; z-index:2;
+}
+.lobbyVideoOffOverlay p { color:rgba(255,255,255,0.38); font-size:0.78rem; margin:0; font-family:inherit; }
+.lobbyDeviceRow  { display:flex; gap:10px; }
+.lobbyDeviceBtn  {
+    flex:1; display:flex; align-items:center; justify-content:center; gap:7px;
+    background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.11);
+    color:rgba(255,255,255,0.78); padding:10px 14px; border-radius:10px;
+    cursor:pointer; font-size:0.82rem; font-weight:500; font-family:inherit;
+    transition:background 0.15s, border-color 0.15s, color 0.15s; white-space:nowrap;
+}
+.lobbyDeviceBtn:hover    { background:rgba(255,255,255,0.13); border-color:rgba(255,255,255,0.22); color:#fff; }
+.lobbyDeviceBtnOff       { background:rgba(239,68,68,0.1) !important; border-color:rgba(239,68,68,0.28) !important; color:#fca5a5 !important; }
+.lobbyDeviceBtnOff:hover { background:rgba(239,68,68,0.18) !important; }
+.joinHint { font-size:0.72rem; font-weight:400; opacity:0.75; margin-left:2px; }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   RESPONSIVE — TABLET  (≤ 768px)
+───────────────────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+
+    /* Lobby */
+    .lobbyContainer { align-items: flex-start; padding-top: 20px; }
+    .lobbyCard      { padding: 26px 20px; gap: 18px; }
+    .lobbyBrand h1  { font-size: 1.4rem; }
+
+    /* Navbar: hide room name to save space */
+    .navRoom   { display: none; }
+    .navbar    { padding: 0 14px; }
+    .navBrand  { font-size: 0.95rem; }
+    .navTimer  { font-size: 0.8rem; letter-spacing: 0.8px; }
+    .navBtn    { padding: 4px 10px; font-size: 0.75rem; }
+    .navParticipants { display: none; }
+
+    /* Chat: narrower */
+    .chatRoom { width: min(300px, 85vw); }
+
+    /* Local video */
+    .meetUserVideo      { height: 16vh; }
+    .localVideoWrapper  { left: 10px; bottom: 9vh; }
+
+    /* Control bar */
+    .controlBar   { padding: 8px 16px; gap: 2px; }
+    .controlBtn   { width: 44px !important; height: 44px !important; }
+    .endCallBtn   { width: 48px !important; height: 48px !important; }
+    .controlBtn svg, .endCallBtn svg { font-size: 1.2rem; }
+
+    /* Tiles */
+    .participantTile video { width: 45vw; min-width: unset; height: 26vw; }
 }
 
-.lobbyVideoOffOverlay p {
-    color: rgba(255, 255, 255, 0.38);
-    font-size: 0.78rem;
-    margin: 0;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-}
+/* ─────────────────────────────────────────────────────────────────────────
+   RESPONSIVE — PHONE  (≤ 480px)
+───────────────────────────────────────────────────────────────────────── */
+@media (max-width: 480px) {
 
-/* Row of two device toggle buttons between preview and name field */
-.lobbyDeviceRow {
-    display: flex;
-    gap: 10px;
-}
+    /* Lobby card fills screen */
+    .lobbyContainer { padding: 12px; }
+    .lobbyCard      { padding: 20px 16px; gap: 16px; border-radius: 14px; }
+    .lobbyBrand h1  { font-size: 1.2rem; }
+    .lobbyBrand p   { font-size: 0.78rem; }
+    .lobbyDeviceBtn { font-size: 0.75rem; padding: 8px 10px; }
 
-/* Each toggle button (camera / mic) */
-.lobbyDeviceBtn {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 7px;
-    background: rgba(255, 255, 255, 0.07);
-    border: 1px solid rgba(255, 255, 255, 0.11);
-    color: rgba(255, 255, 255, 0.78);
-    padding: 10px 14px;
-    border-radius: 10px;
-    cursor: pointer;
-    font-size: 0.82rem;
-    font-weight: 500;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    transition: background 0.15s, border-color 0.15s, color 0.15s;
-    white-space: nowrap;
-}
+    /* Navbar: absolute center sometimes clips — shrink more */
+    .navCenter  { gap: 6px; }
+    .navTimer   { font-size: 0.74rem; letter-spacing: 0.3px; }
+    .navBrand   { font-size: 0.88rem; }
+    .navbar     { padding: 0 10px; }
+    .navBtn     { padding: 4px 8px; font-size: 0.7rem; }
 
-.lobbyDeviceBtn:hover {
-    background: rgba(255, 255, 255, 0.13);
-    border-color: rgba(255, 255, 255, 0.22);
-    color: #ffffff;
-}
+    /* Chat: full width slide-in from right */
+    .chatRoom {
+        width: 100vw; max-width: 100vw;
+        border-left: none;
+        border-top: 1px solid rgba(255,255,255,0.08);
+    }
 
-/* OFF state — red tint */
-.lobbyDeviceBtnOff {
-    background: rgba(239, 68, 68, 0.1) !important;
-    border-color: rgba(239, 68, 68, 0.28) !important;
-    color: #fca5a5 !important;
-}
+    /* Smaller controls */
+    .controlBar { padding: 7px 10px; gap: 0; }
+    .controlBtn { width: 40px !important; height: 40px !important; }
+    .endCallBtn { width: 44px !important; height: 44px !important; margin: 0 2px; }
+    .controlBtn svg, .endCallBtn svg { font-size: 1.1rem; }
 
-.lobbyDeviceBtnOff:hover {
-    background: rgba(239, 68, 68, 0.18) !important;
-}
+    /* Smaller emoji picker */
+    .reactionBtn { font-size: 1.2rem; padding: 3px 5px; }
 
-/* small hint text inside Join Now button */
-.joinHint {
-    font-size: 0.72rem;
-    font-weight: 400;
-    opacity: 0.75;
-    margin-left: 2px;
+    /* Local video: smaller, won't cover controls */
+    .meetUserVideo    { height: 13vh; border-radius: 10px; }
+    .localVideoWrapper { left: 8px; bottom: 8vh; }
+
+    /* Conference tiles: stack to single column */
+    .conferenceView { padding: 62px 8px 8px; gap: 8px; }
+    .participantTile video {
+        width: calc(100vw - 16px);
+        min-width: unset;
+        height: 30vw;
+    }
+
+    /* Toast smaller text */
+    .toast { font-size: 0.74rem; padding: 6px 12px; }
+
+    /* Empty state */
+    .emptyTitle { font-size: 0.88rem; }
+    .emptySub   { font-size: 0.74rem; }
+    .emptyPulse { width: 54px; height: 54px; }
 }
