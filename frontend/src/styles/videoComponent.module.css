@@ -290,4 +290,142 @@
     .emptyPulse { width:54px; height:54px; }
     .hostParticipantActions { gap:4px; }
     .hostActionBtn { padding:4px 8px; font-size:0.82rem; }
+
+    /* NEW: captions / shortcuts / more-menu on phone */
+    .captionBubble { bottom:84px; font-size:0.8rem; padding:8px 14px; max-width:90vw; }
+    .moreMenu { min-width:180px; }
+    .moreMenuItem { font-size:0.78rem; padding:8px 10px; }
+    .shortcutsPanel { padding:6px 16px 14px; }
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────
+   NEW: LIVE CAPTIONS
+───────────────────────────────────────────────────────────────────────── */
+.captionBubble {
+    position:absolute;
+    bottom:96px;
+    left:50%;
+    transform:translateX(-50%);
+    max-width:min(640px, 80vw);
+    background:rgba(8,12,40,0.88);
+    backdrop-filter:blur(10px);
+    -webkit-backdrop-filter:blur(10px);
+    color:rgba(255,255,255,0.95);
+    font-size:0.92rem;
+    line-height:1.45;
+    padding:10px 18px;
+    border-radius:14px;
+    border:1px solid rgba(255,255,255,0.1);
+    box-shadow:0 8px 24px rgba(0,0,0,0.4);
+    text-align:center;
+    z-index:480;
+    animation:captionIn 0.2s ease;
+    pointer-events:none;
+}
+.captionName { color:#60a5fa; font-weight:600; margin-right:2px; }
+@keyframes captionIn { from{opacity:0;transform:translateX(-50%) translateY(6px);} to{opacity:1;transform:translateX(-50%) translateY(0);} }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   NEW: KEYBOARD SHORTCUTS HELP MODAL
+───────────────────────────────────────────────────────────────────────── */
+.shortcutsOverlay {
+    position:absolute; inset:0;
+    background:rgba(0,0,0,0.6);
+    display:flex; align-items:center; justify-content:center;
+    z-index:700;
+    animation:fadeIn 0.15s ease;
+}
+.shortcutsPanel {
+    background:rgba(10,14,55,0.98);
+    border:1px solid rgba(255,255,255,0.1);
+    border-radius:16px;
+    padding:8px 22px 18px;
+    width:min(360px, 88vw);
+    backdrop-filter:blur(16px);
+    -webkit-backdrop-filter:blur(16px);
+    box-shadow:0 16px 48px rgba(0,0,0,0.5);
+    animation:shortcutsPop 0.18s ease;
+}
+@keyframes shortcutsPop { from{opacity:0;transform:scale(0.94);} to{opacity:1;transform:scale(1);} }
+.shortcutsPanelHeader {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:12px 2px 14px;
+    border-bottom:1px solid rgba(255,255,255,0.08);
+    margin-bottom:12px;
+    color:#fff; font-size:0.95rem; font-weight:600;
+}
+.shortcutRow {
+    display:flex; align-items:center; gap:14px;
+    padding:9px 2px;
+    color:rgba(255,255,255,0.78);
+    font-size:0.85rem;
+}
+.kbd {
+    display:inline-flex; align-items:center; justify-content:center;
+    min-width:38px; height:28px; padding:0 10px;
+    background:rgba(255,255,255,0.09);
+    border:1px solid rgba(255,255,255,0.18);
+    border-bottom:2px solid rgba(255,255,255,0.22);
+    border-radius:7px;
+    color:#fff; font-family:'Courier New',Courier,monospace;
+    font-size:0.78rem; font-weight:600;
+    flex-shrink:0;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   NEW: MORE MENU (Record / Captions / Blur / PiP / Shortcuts)
+───────────────────────────────────────────────────────────────────────── */
+.controlBtn { position:relative; } /* anchor for the active-feature dot */
+
+.moreMenuArea { position:relative; }
+
+.moreMenu {
+    position:absolute;
+    bottom:62px;
+    left:50%;
+    transform:translateX(-50%);
+    background:rgba(8,12,55,0.97);
+    border:1px solid rgba(255,255,255,0.12);
+    border-radius:16px;
+    padding:6px;
+    display:flex;
+    flex-direction:column;
+    gap:1px;
+    min-width:200px;
+    backdrop-filter:blur(16px);
+    -webkit-backdrop-filter:blur(16px);
+    box-shadow:0 10px 32px rgba(0,0,0,0.5);
+    animation:pickerPop 0.18s ease;
+    z-index:120;
+}
+
+.moreMenuItem {
+    display:flex;
+    align-items:center;
+    gap:10px;
+    background:transparent;
+    border:none;
+    color:rgba(255,255,255,0.85);
+    font-family:inherit;
+    font-size:0.82rem;
+    padding:9px 12px;
+    border-radius:9px;
+    cursor:pointer;
+    text-align:left;
+    transition:background 0.15s;
+    white-space:nowrap;
+}
+.moreMenuItem:hover     { background:rgba(255,255,255,0.09); }
+.moreMenuItem:disabled  { opacity:0.35; cursor:not-allowed; }
+.moreMenuItem:disabled:hover { background:transparent; }
+.moreMenuItem svg       { font-size:1.15rem; flex-shrink:0; }
+
+.moreActiveDot {
+    position:absolute;
+    top:6px; right:6px;
+    width:8px; height:8px;
+    border-radius:50%;
+    background:#3b82f6;
+    box-shadow:0 0 0 2px rgba(8,12,55,0.9);
 }
