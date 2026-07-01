@@ -97,5 +97,32 @@ const addToHistory = async (req, res) => {
     }
 }
 
+// NEW: lets the frontend check "is the token I already have in localStorage still good?"
+// without forcing the user to type their username/password again.
+const verifyToken = async (req, res) => {
+    const { token } = req.query;
 
-export { login, register, getUserHistory, addToHistory }
+    if (!token) {
+        return res.status(httpStatus.BAD_REQUEST).json({ success: false, message: "No token provided" });
+    }
+
+    try {
+        const user = await User.findOne({ token: token });
+
+        if (!user) {
+            return res.status(httpStatus.UNAUTHORIZED).json({ success: false, message: "Invalid or expired session" });
+        }
+
+        return res.status(httpStatus.OK).json({
+            success: true,
+            username: user.username,
+            name: user.name
+        });
+
+    } catch (e) {
+        return res.status(500).json({ success: false, message: `Something went wrong ${e}` })
+    }
+}
+
+
+export { login, register, getUserHistory, addToHistory, verifyToken }

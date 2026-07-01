@@ -15,20 +15,24 @@ function App() {
 
         <AuthProvider>
 
-
           <Routes>
 
             <Route path='/' element={<LandingPage />} />
 
             <Route path='/auth' element={<Authentication />} />
 
-            <Route path='/home's element={<HomeComponent />} />
+            {/* FIXED: was path='/home's (syntax error — the 's was a typo) */}
+            <Route path='/home' element={<HomeComponent />} />
+
             <Route path='/history' element={<History />} />
             <Route path='/:url' element={<VideoMeetComponent />} />
+
           </Routes>
+
         </AuthProvider>
 
       </Router>
+
     </div>
   );
 }
