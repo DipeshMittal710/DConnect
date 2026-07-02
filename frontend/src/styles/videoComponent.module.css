@@ -62,10 +62,15 @@
 @keyframes toastIn  { from{opacity:0;transform:translateY(-10px) scale(0.94)}to{opacity:1;transform:translateY(0) scale(1)} }
 @keyframes toastOut { from{opacity:1;transform:translateY(0) scale(1)}to{opacity:0;transform:translateY(-8px) scale(0.94)} }
 
+/* ── LIVE CAPTIONS ──────────────────────────────────────────────────────── */
+.captionBubble { position:absolute; bottom:96px; left:50%; transform:translateX(-50%); max-width:min(640px,80vw); background:rgba(8,12,40,0.88); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); color:rgba(255,255,255,0.95); font-size:0.92rem; line-height:1.45; padding:10px 18px; border-radius:14px; border:1px solid rgba(255,255,255,0.1); box-shadow:0 8px 24px rgba(0,0,0,0.4); text-align:center; z-index:480; animation:captionIn 0.2s ease; pointer-events:none; }
+.captionName { color:#60a5fa; font-weight:600; margin-right:2px; }
+@keyframes captionIn { from{opacity:0;transform:translateX(-50%) translateY(6px);}to{opacity:1;transform:translateX(-50%) translateY(0);} }
+
 /* ── CONTROL BAR ────────────────────────────────────────────────────────── */
 .buttonContainers { position:absolute; width:100%; bottom:0; display:flex; justify-content:center; align-items:center; padding:20px 0 24px; z-index:100; background:linear-gradient(to top,rgba(1,4,48,0.88) 0%,transparent 100%); }
 .controlBar       { background:rgba(8,12,55,0.88); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); border:1px solid rgba(255,255,255,0.1); border-radius:60px; padding:10px 22px; display:flex; align-items:center; gap:4px; box-shadow:0 8px 32px rgba(0,0,0,0.5); }
-.controlBtn       { color:rgba(255,255,255,0.82) !important; width:48px; height:48px; transition:background 0.15s !important; }
+.controlBtn       { color:rgba(255,255,255,0.82) !important; width:48px; height:48px; transition:background 0.15s !important; position:relative; }
 .controlBtn:hover { background:rgba(255,255,255,0.1) !important; }
 .controlBtn svg   { font-size:1.4rem; }
 .controlBtnActive { background:rgba(255,255,255,0.16) !important; color:#fff !important; }
@@ -79,13 +84,32 @@
 .recordingBadge   { position:absolute; top:8px; left:50%; transform:translateX(-50%); background:rgba(239,68,68,0.85); color:white; font-size:0.65rem; font-weight:700; padding:2px 8px; border-radius:20px; letter-spacing:0.5px; white-space:nowrap; animation:recordBlink 1.2s ease-in-out infinite; }
 
 /* ── REACTIONS ──────────────────────────────────────────────────────────── */
-.reactionArea   { position:relative; }
-.reactionPicker { position:absolute; bottom:62px; left:50%; transform:translateX(-50%); background:rgba(8,12,55,0.96); border:1px solid rgba(255,255,255,0.12); border-radius:40px; padding:8px 12px; display:flex; gap:2px; backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); box-shadow:0 8px 28px rgba(0,0,0,0.45); white-space:nowrap; animation:pickerPop 0.18s ease; }
+.reactionArea    { position:relative; }
+.reactionPicker  { position:absolute; bottom:62px; left:50%; transform:translateX(-50%); background:rgba(8,12,55,0.96); border:1px solid rgba(255,255,255,0.12); border-radius:40px; padding:8px 12px; display:flex; gap:2px; backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); box-shadow:0 8px 28px rgba(0,0,0,0.45); white-space:nowrap; animation:pickerPop 0.18s ease; }
 @keyframes pickerPop { from{opacity:0;transform:translateX(-50%) scale(0.82)}to{opacity:1;transform:translateX(-50%) scale(1)} }
-.reactionBtn    { background:transparent; border:none; cursor:pointer; font-size:1.5rem; padding:4px 8px; border-radius:10px; transition:transform 0.12s,background 0.12s; line-height:1; }
-.reactionBtn:hover { transform:scale(1.35); background:rgba(255,255,255,0.1); }
-.floatingReaction  { position:absolute; bottom:90px; font-size:2.4rem; animation:floatUp 3.2s ease-out forwards; pointer-events:none; z-index:400; line-height:1; filter:drop-shadow(0 2px 8px rgba(0,0,0,0.3)); }
+.reactionBtn     { background:transparent; border:none; cursor:pointer; font-size:1.5rem; padding:4px 8px; border-radius:10px; transition:transform 0.12s,background 0.12s; line-height:1; }
+.reactionBtn:hover  { transform:scale(1.35); background:rgba(255,255,255,0.1); }
+.floatingReaction   { position:absolute; bottom:90px; font-size:2.4rem; animation:floatUp 3.2s ease-out forwards; pointer-events:none; z-index:400; line-height:1; filter:drop-shadow(0 2px 8px rgba(0,0,0,0.3)); }
 @keyframes floatUp { 0%{transform:translateY(0) scale(0.7);opacity:1;}15%{transform:translateY(-24px) scale(1.3);opacity:1;}100%{transform:translateY(-68vh) scale(0.85);opacity:0;} }
+
+/* ── MORE MENU ──────────────────────────────────────────────────────────── */
+.moreMenuArea { position:relative; }
+.moreMenu { position:absolute; bottom:62px; left:50%; transform:translateX(-50%); background:rgba(8,12,55,0.97); border:1px solid rgba(255,255,255,0.12); border-radius:16px; padding:6px; display:flex; flex-direction:column; gap:1px; min-width:200px; backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); box-shadow:0 10px 32px rgba(0,0,0,0.5); animation:pickerPop 0.18s ease; z-index:120; }
+.moreMenuItem { display:flex; align-items:center; gap:10px; background:transparent; border:none; color:rgba(255,255,255,0.85); font-family:inherit; font-size:0.82rem; padding:9px 12px; border-radius:9px; cursor:pointer; text-align:left; transition:background 0.15s; white-space:nowrap; }
+.moreMenuItem:hover    { background:rgba(255,255,255,0.09); }
+.moreMenuItem:disabled { opacity:0.35; cursor:not-allowed; }
+.moreMenuItem:disabled:hover { background:transparent; }
+.moreMenuItem svg      { font-size:1.15rem; flex-shrink:0; }
+.moreActiveDot { position:absolute; top:6px; right:6px; width:8px; height:8px; border-radius:50%; background:#3b82f6; box-shadow:0 0 0 2px rgba(8,12,55,0.9); }
+
+/* ── KEYBOARD SHORTCUTS MODAL ───────────────────────────────────────────── */
+.shortcutsOverlay { position:absolute; inset:0; background:rgba(0,0,0,0.6); display:flex; align-items:center; justify-content:center; z-index:700; animation:fadeIn 0.15s ease; }
+@keyframes fadeIn { from{opacity:0}to{opacity:1} }
+.shortcutsPanel { background:rgba(10,14,55,0.98); border:1px solid rgba(255,255,255,0.1); border-radius:16px; padding:8px 22px 18px; width:min(360px,88vw); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); box-shadow:0 16px 48px rgba(0,0,0,0.5); animation:shortcutsPop 0.18s ease; }
+@keyframes shortcutsPop { from{opacity:0;transform:scale(0.94);}to{opacity:1;transform:scale(1);} }
+.shortcutsPanelHeader { display:flex; align-items:center; justify-content:space-between; padding:12px 2px 14px; border-bottom:1px solid rgba(255,255,255,0.08); margin-bottom:12px; color:#fff; font-size:0.95rem; font-weight:600; }
+.shortcutRow { display:flex; align-items:center; gap:14px; padding:9px 2px; color:rgba(255,255,255,0.78); font-size:0.85rem; }
+.kbd { display:inline-flex; align-items:center; justify-content:center; min-width:38px; height:28px; padding:0 10px; background:rgba(255,255,255,0.09); border:1px solid rgba(255,255,255,0.18); border-bottom:2px solid rgba(255,255,255,0.22); border-radius:7px; color:#fff; font-family:'Courier New',Courier,monospace; font-size:0.78rem; font-weight:600; flex-shrink:0; }
 
 /* ── LOCAL VIDEO ────────────────────────────────────────────────────────── */
 .localVideoWrapper { position:absolute; bottom:10vh; left:16px; display:flex; z-index:50; }
@@ -93,6 +117,7 @@
 .speakingVideo     { box-shadow:0 0 0 3px #3b82f6,0 0 22px rgba(59,130,246,0.45),0 8px 28px rgba(0,0,0,0.65) !important; }
 .youLabel          { position:absolute; bottom:8px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.6); color:rgba(255,255,255,0.9); font-size:0.7rem; font-weight:500; padding:2px 10px; border-radius:20px; pointer-events:none; white-space:nowrap; letter-spacing:0.3px; }
 .handBadgeLocal    { position:absolute; top:6px; right:6px; font-size:1.1rem; background:rgba(0,0,0,0.6); border-radius:50%; width:30px; height:30px; display:flex; align-items:center; justify-content:center; animation:handPop 0.4s cubic-bezier(0.34,1.56,0.64,1); }
+@keyframes handPop { 0%{transform:scale(0);opacity:0;}60%{transform:scale(1.3);opacity:1;}100%{transform:scale(1);opacity:1;} }
 
 /* ── EMPTY STATE ────────────────────────────────────────────────────────── */
 .emptyState { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); text-align:center; pointer-events:none; display:flex; flex-direction:column; align-items:center; gap:10px; width:90%; }
@@ -102,120 +127,126 @@
 .emptyTitle { color:rgba(255,255,255,0.4); font-size:1rem; font-weight:500; margin:0; }
 .emptySub   { color:rgba(255,255,255,0.22); font-size:0.8rem; margin:0; }
 
-/* ── PARTICIPANT TILES (GRID) ────────────────────────────────────────────── */
-.conferenceView { display:flex; flex-wrap:wrap; padding:68px 12px 12px; gap:10px; align-content:flex-start; }
-.participantTile { position:relative; border-radius:14px; overflow:hidden; background:rgba(255,255,255,0.03); border:2px solid transparent; box-shadow:0 4px 16px rgba(0,0,0,0.4); transition:border-color 0.2s ease,box-shadow 0.2s ease; cursor:pointer; }
-.participantTile video { width:40vw; height:22vh; min-width:30vw; display:block; object-fit:cover; }
+/* ────────────────────────────────────────────────────────────────────────
+   PARTICIPANT TILES — FIXED GRID
+   
+   The grid fills the entire space between the navbar and the control bar.
+   Each tile fills its grid cell completely — no more fixed px widths that
+   caused the "only eyes visible" problem.
+────────────────────────────────────────────────────────────────────────── */
+.conferenceView {
+    position: absolute;
+    top: 58px;           /* directly below navbar */
+    left: 0;
+    right: 0;
+    bottom: 88px;        /* directly above control bar */
+    display: grid;
+    /* gridTemplateColumns is set inline from JSX based on participant count */
+    gap: 8px;
+    padding: 10px;
+    box-sizing: border-box;
+    overflow-y: auto;
+    align-content: stretch;
+}
+
+.participantTile {
+    position: relative;
+    border-radius: 14px;
+    overflow: hidden;
+    background: rgba(10,12,40,0.8);
+    border: 2px solid transparent;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    cursor: pointer;
+    min-height: 0;        /* critical for CSS grid — lets the cell shrink */
+}
+
+/* Video fills the tile completely */
+.participantTile video {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;   /* cover = no black bars, face always visible */
+    display: block;
+}
+
 .speakingTile { border-color:#3b82f6 !important; box-shadow:0 0 0 1px #3b82f6,0 0 20px rgba(59,130,246,0.35),0 4px 16px rgba(0,0,0,0.4) !important; }
-.handBadge     { position:absolute; top:8px; right:8px; font-size:1.2rem; background:rgba(0,0,0,0.62); border-radius:50%; width:34px; height:34px; display:flex; align-items:center; justify-content:center; animation:handPop 0.4s cubic-bezier(0.34,1.56,0.64,1); }
-.pinHint       { position:absolute; top:8px; left:8px; background:rgba(0,0,0,0.6); border-radius:50%; width:28px; height:28px; font-size:0.85rem; display:flex; align-items:center; justify-content:center; opacity:0; transition:opacity 0.18s; pointer-events:all; cursor:pointer; }
+
+.handBadge { position:absolute; top:8px; right:8px; font-size:1.2rem; background:rgba(0,0,0,0.62); border-radius:50%; width:34px; height:34px; display:flex; align-items:center; justify-content:center; animation:handPop 0.4s cubic-bezier(0.34,1.56,0.64,1); }
+
+.pinHint { position:absolute; top:8px; left:8px; background:rgba(0,0,0,0.6); border-radius:50%; width:28px; height:28px; font-size:0.85rem; display:flex; align-items:center; justify-content:center; opacity:0; transition:opacity 0.18s; pointer-events:all; cursor:pointer; z-index:2; }
 .participantTile:hover .pinHint { opacity:1; }
-.tileName      { position:absolute; bottom:8px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.6); color:rgba(255,255,255,0.9); font-size:0.7rem; font-weight:500; padding:2px 10px; border-radius:20px; pointer-events:none; white-space:nowrap; max-width:90%; overflow:hidden; text-overflow:ellipsis; }
-.tileHostBadge { position:absolute; top:8px; left:42px; font-size:0.9rem; background:rgba(0,0,0,0.6); border-radius:20px; padding:2px 7px; }
-@keyframes handPop { 0%{transform:scale(0);opacity:0;}60%{transform:scale(1.3);opacity:1;}100%{transform:scale(1);opacity:1;} }
 
-/* ── SPOTLIGHT / PIN ────────────────────────────────────────────────────── */
-.conferenceViewSpotlight { display:flex; flex-direction:column; padding:68px 12px 80px; gap:10px; height:100vh; box-sizing:border-box; overflow:hidden; }
-.pinnedTile              { position:relative; flex:1; min-height:0; border-radius:16px; overflow:hidden; background:#000; border:2px solid rgba(255,255,255,0.1); cursor:pointer; transition:border-color 0.2s; box-shadow:0 8px 32px rgba(0,0,0,0.55); }
-.pinnedTile:hover        { border-color:rgba(255,255,255,0.3); }
-.pinnedTile video        { width:100%; height:100%; object-fit:contain; display:block; }
-.pinnedLabel             { position:absolute; top:12px; left:12px; background:rgba(0,0,0,0.65); color:rgba(255,255,255,0.85); font-size:0.72rem; font-weight:500; padding:4px 12px; border-radius:20px; pointer-events:none; white-space:nowrap; }
-.thumbnailStrip          { display:flex; gap:8px; flex-shrink:0; overflow-x:auto; overflow-y:hidden; padding:2px 0 6px; scrollbar-width:thin; scrollbar-color:rgba(255,255,255,0.1) transparent; }
-.thumbnailStrip::-webkit-scrollbar { height:4px; }
-.thumbnailStrip::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.12); border-radius:2px; }
-.thumbnailTile           { position:relative; flex-shrink:0; border-radius:10px; overflow:hidden; cursor:pointer; border:2px solid transparent; transition:border-color 0.18s,transform 0.15s; box-shadow:0 2px 10px rgba(0,0,0,0.4); }
-.thumbnailTile:hover     { border-color:rgba(255,255,255,0.35); transform:scale(1.03); }
-.thumbnailSpeaking       { border-color:#3b82f6 !important; box-shadow:0 0 10px rgba(59,130,246,0.4) !important; }
-.thumbnailTile video     { width:150px; height:96px; object-fit:cover; display:block; }
-.handBadgeSm             { position:absolute; top:4px; right:4px; font-size:0.75rem; background:rgba(0,0,0,0.65); border-radius:50%; width:20px; height:20px; display:flex; align-items:center; justify-content:center; }
+.tileName { position:absolute; bottom:8px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.6); color:rgba(255,255,255,0.9); font-size:0.7rem; font-weight:500; padding:2px 10px; border-radius:20px; pointer-events:none; white-space:nowrap; max-width:90%; overflow:hidden; text-overflow:ellipsis; z-index:2; }
+.tileHostBadge { position:absolute; top:8px; left:42px; font-size:0.9rem; background:rgba(0,0,0,0.6); border-radius:20px; padding:2px 7px; z-index:2; }
 
-/* ────────────────────────────────────────────────────────────────────────── 
-   NEW: HOST TILE OVERLAY (appears on hover when you are host)
-─────────────────────────────────────────────────────────────────────────── */
-.hostTileOverlay {
-    position:absolute; bottom:0; left:0; right:0;
-    background:linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 100%);
-    display:flex; align-items:center; justify-content:center; gap:6px;
-    padding:10px 8px 8px;
-    opacity:0; transition:opacity 0.18s;
-}
+/* ── HOST TILE OVERLAY ──────────────────────────────────────────────────── */
+.hostTileOverlay { position:absolute; bottom:0; left:0; right:0; background:linear-gradient(to top,rgba(0,0,0,0.85) 0%,transparent 100%); display:flex; align-items:center; justify-content:center; gap:6px; padding:10px 8px 8px; opacity:0; transition:opacity 0.18s; z-index:2; }
 .participantTile:hover .hostTileOverlay { opacity:1; }
-
-.hostTileBtn {
-    background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.2);
-    border-radius:8px; padding:5px 10px; cursor:pointer; font-size:1rem;
-    transition:background 0.15s, transform 0.12s; color:white; font-family:inherit;
-}
+.hostTileBtn      { background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.2); border-radius:8px; padding:5px 10px; cursor:pointer; font-size:1rem; transition:background 0.15s,transform 0.12s; color:white; font-family:inherit; }
 .hostTileBtn:hover { background:rgba(255,255,255,0.28); transform:scale(1.1); }
 .hostTileKick      { background:rgba(239,68,68,0.25) !important; border-color:rgba(239,68,68,0.4) !important; }
 .hostTileKick:hover { background:rgba(239,68,68,0.45) !important; }
 
-/* ── KICK CONFIRM OVERLAY (on tile) ─────────────────────────────────────── */
-.kickConfirmOverlay {
-    position:absolute; inset:0; background:rgba(0,0,0,0.82);
-    display:flex; flex-direction:column; align-items:center; justify-content:center;
-    gap:10px; border-radius:12px; padding:16px;
-    animation:fadeIn 0.18s ease;
-}
+/* ── KICK CONFIRM OVERLAY ───────────────────────────────────────────────── */
+.kickConfirmOverlay { position:absolute; inset:0; background:rgba(0,0,0,0.82); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; border-radius:12px; padding:16px; animation:fadeIn 0.18s ease; z-index:10; }
 .kickConfirmOverlay p { color:white; font-size:0.82rem; text-align:center; margin:0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; }
-@keyframes fadeIn { from{opacity:0}to{opacity:1} }
+.kickConfirmYes { background:#ef4444; border:none; color:#fff; border-radius:8px; padding:7px 16px; cursor:pointer; font-size:0.82rem; font-weight:600; font-family:inherit; transition:background 0.15s; }
+.kickConfirmYes:hover { background:#dc2626; }
+.kickConfirmNo  { background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.15); color:rgba(255,255,255,0.75); border-radius:8px; padding:7px 16px; cursor:pointer; font-size:0.82rem; font-family:inherit; transition:background 0.15s; }
+.kickConfirmNo:hover  { background:rgba(255,255,255,0.18); }
 
-/* ── SIDE PANEL (participants + chat tabbed) ─────────────────────────────── */
-.sidePanel {
-    position:absolute; top:58px; right:0;
-    height:calc(100vh - 58px); width:320px;
-    background:rgba(5,7,42,0.97); border-left:1px solid rgba(255,255,255,0.08);
-    display:flex; flex-direction:column; z-index:150;
-    backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
-    animation:slideIn 0.22s ease;
-}
+/* ── SPOTLIGHT / PIN ────────────────────────────────────────────────────── */
+.conferenceViewSpotlight { display:flex; flex-direction:column; position:absolute; top:58px; left:0; right:0; bottom:88px; padding:10px; gap:8px; box-sizing:border-box; overflow:hidden; }
+.pinnedTile              { position:relative; flex:1; min-height:0; border-radius:16px; overflow:hidden; background:#000; border:2px solid rgba(255,255,255,0.1); cursor:pointer; transition:border-color 0.2s; box-shadow:0 8px 32px rgba(0,0,0,0.55); }
+.pinnedTile:hover        { border-color:rgba(255,255,255,0.3); }
+.pinnedTile video        { width:100%; height:100%; object-fit:contain; display:block; }
+.pinnedLabel             { position:absolute; top:12px; left:12px; background:rgba(0,0,0,0.65); color:rgba(255,255,255,0.85); font-size:0.72rem; font-weight:500; padding:4px 12px; border-radius:20px; pointer-events:none; white-space:nowrap; z-index:2; }
+.thumbnailStrip          { display:flex; gap:8px; flex-shrink:0; overflow-x:auto; overflow-y:hidden; padding:2px 0 4px; scrollbar-width:thin; scrollbar-color:rgba(255,255,255,0.1) transparent; }
+.thumbnailStrip::-webkit-scrollbar { height:4px; }
+.thumbnailStrip::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.12); border-radius:2px; }
+.thumbnailTile           { position:relative; flex-shrink:0; width:150px; height:96px; border-radius:10px; overflow:hidden; cursor:pointer; border:2px solid transparent; transition:border-color 0.18s,transform 0.15s; box-shadow:0 2px 10px rgba(0,0,0,0.4); }
+.thumbnailTile:hover     { border-color:rgba(255,255,255,0.35); transform:scale(1.03); }
+.thumbnailSpeaking       { border-color:#3b82f6 !important; box-shadow:0 0 10px rgba(59,130,246,0.4) !important; }
+.thumbnailTile video     { width:100%; height:100%; object-fit:cover; display:block; }
+.handBadgeSm             { position:absolute; top:4px; right:4px; font-size:0.75rem; background:rgba(0,0,0,0.65); border-radius:50%; width:20px; height:20px; display:flex; align-items:center; justify-content:center; }
+
+/* ── SIDE PANEL ─────────────────────────────────────────────────────────── */
+.sidePanel { position:absolute; top:58px; right:0; height:calc(100vh - 58px); width:320px; background:rgba(5,7,42,0.97); border-left:1px solid rgba(255,255,255,0.08); display:flex; flex-direction:column; z-index:150; backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); animation:slideIn 0.22s ease; }
 @keyframes slideIn { from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1} }
-
 .sidePanelTabs   { display:flex; align-items:center; border-bottom:1px solid rgba(255,255,255,0.08); flex-shrink:0; padding:4px 4px 0; gap:2px; }
 .sidePanelTab    { flex:1; background:transparent; border:none; color:rgba(255,255,255,0.45); font-family:inherit; font-size:0.8rem; font-weight:500; padding:10px 6px; cursor:pointer; border-bottom:2px solid transparent; transition:color 0.15s,border-color 0.15s; white-space:nowrap; }
-.sidePanelTab:hover       { color:rgba(255,255,255,0.8); }
-.sidePanelTabActive       { color:#fff !important; border-bottom-color:#3b82f6 !important; }
+.sidePanelTab:hover    { color:rgba(255,255,255,0.8); }
+.sidePanelTabActive    { color:#fff !important; border-bottom-color:#3b82f6 !important; }
 .sidePanelClose  { background:rgba(255,255,255,0.07); border:none; color:rgba(255,255,255,0.5); width:28px; height:28px; border-radius:50%; cursor:pointer; font-size:0.75rem; display:flex; align-items:center; justify-content:center; margin-left:auto; margin-right:4px; flex-shrink:0; transition:background 0.15s; font-family:inherit; }
 .sidePanelClose:hover { background:rgba(255,255,255,0.15); color:#fff; }
-.chatBadge       { display:inline-flex; align-items:center; justify-content:center; background:#ef4444; color:#fff; border-radius:10px; font-size:0.65rem; font-weight:700; padding:1px 5px; margin-left:4px; min-width:16px; }
+.chatBadge { display:inline-flex; align-items:center; justify-content:center; background:#ef4444; color:#fff; border-radius:10px; font-size:0.65rem; font-weight:700; padding:1px 5px; margin-left:4px; min-width:16px; }
 
-/* ── PARTICIPANTS TAB CONTENT ────────────────────────────────────────────── */
+/* ── PARTICIPANTS TAB ───────────────────────────────────────────────────── */
 .participantsContent { flex:1; overflow-y:auto; display:flex; flex-direction:column; scrollbar-width:thin; scrollbar-color:rgba(255,255,255,0.08) transparent; }
 .participantsContent::-webkit-scrollbar       { width:4px; }
 .participantsContent::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.1); border-radius:2px; }
-
 .hostBulkRow { display:flex; gap:8px; padding:12px 14px; border-bottom:1px solid rgba(255,255,255,0.06); flex-shrink:0; }
 .hostBulkBtn { flex:1; background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.25); color:#fca5a5; padding:8px 12px; border-radius:10px; cursor:pointer; font-family:inherit; font-size:0.8rem; font-weight:600; transition:background 0.15s; }
 .hostBulkBtn:hover { background:rgba(239,68,68,0.22); }
-
 .participantItem { display:flex; flex-direction:column; padding:10px 14px; border-bottom:1px solid rgba(255,255,255,0.05); gap:8px; }
 .participantInfo { display:flex; align-items:center; gap:10px; flex:1; min-width:0; }
-
 .participantAvatar { width:34px; height:34px; border-radius:50%; background:linear-gradient(135deg,#3b82f6,#8b5cf6); color:#fff; font-size:0.9rem; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
-
 .participantName { color:#fff; font-size:0.85rem; font-weight:500; display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
 .hostTag         { background:rgba(251,191,36,0.2); color:#fbbf24; border:1px solid rgba(251,191,36,0.3); font-size:0.68rem; padding:1px 7px; border-radius:10px; font-weight:600; }
 .participantYou  { color:rgba(255,255,255,0.35); font-size:0.72rem; display:block; margin-top:2px; }
 .handIndicator   { color:#fbbf24; font-size:0.72rem; display:block; margin-top:2px; }
-
 .participantStatus { display:flex; align-items:center; gap:4px; flex-shrink:0; }
-
-/* Host per-participant action buttons */
 .hostParticipantActions { display:flex; gap:6px; flex-wrap:wrap; }
 .hostActionBtn { background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.12); border-radius:8px; padding:5px 10px; cursor:pointer; font-size:0.9rem; transition:background 0.15s,transform 0.12s; color:white; font-family:inherit; }
 .hostActionBtn:hover { background:rgba(255,255,255,0.18); transform:scale(1.08); }
 .hostKickBtn         { background:rgba(239,68,68,0.15) !important; border-color:rgba(239,68,68,0.3) !important; }
 .hostKickBtn:hover   { background:rgba(239,68,68,0.3) !important; }
-
-/* Kick confirmation (in participants list) */
 .kickConfirm { display:flex; align-items:center; gap:8px; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.25); border-radius:10px; padding:8px 12px; flex-wrap:wrap; }
-.kickConfirm span    { color:rgba(255,255,255,0.85); font-size:0.78rem; flex:1; min-width:100px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; }
-.kickConfirmYes { background:#ef4444; border:none; color:#fff; border-radius:8px; padding:5px 12px; cursor:pointer; font-size:0.78rem; font-weight:600; font-family:inherit; transition:background 0.15s; }
-.kickConfirmYes:hover { background:#dc2626; }
-.kickConfirmNo  { background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.15); color:rgba(255,255,255,0.75); border-radius:8px; padding:5px 12px; cursor:pointer; font-size:0.78rem; font-family:inherit; transition:background 0.15s; }
-.kickConfirmNo:hover  { background:rgba(255,255,255,0.18); }
+.kickConfirm span { color:rgba(255,255,255,0.85); font-size:0.78rem; flex:1; min-width:100px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; }
 
-/* ── CHAT TAB CONTENT ───────────────────────────────────────────────────── */
+/* ── CHAT TAB ───────────────────────────────────────────────────────────── */
 .chatContent     { flex:1; display:flex; flex-direction:column; overflow:hidden; }
 .chattingDisplay { flex:1; overflow-y:auto; padding:14px 12px; display:flex; flex-direction:column; gap:10px; scrollbar-width:thin; scrollbar-color:rgba(255,255,255,0.08) transparent; }
 .chattingDisplay::-webkit-scrollbar       { width:4px; }
@@ -233,8 +264,10 @@
 .messageText     { color:#fff; font-size:0.855rem; margin:0; line-height:1.4; word-break:break-word; }
 .messageTime     { color:rgba(255,255,255,0.28); font-size:0.66rem; margin:0; padding:0 4px; }
 .chattingArea    { display:flex; align-items:center; gap:8px; padding:12px 10px 16px; border-top:1px solid rgba(255,255,255,0.07); flex-shrink:0; }
+.chatCloseBtn    { background:rgba(255,255,255,0.07); color:rgba(255,255,255,0.55); border:none; width:26px; height:26px; border-radius:50%; cursor:pointer; font-size:0.7rem; display:flex; align-items:center; justify-content:center; transition:background 0.15s,color 0.15s; font-family:inherit; }
+.chatCloseBtn:hover { background:rgba(255,255,255,0.15); color:#fff; }
 
-/* ── RESPONSIVE: TABLET ─────────────────────────────────────────────────── */
+/* ── RESPONSIVE TABLET ──────────────────────────────────────────────────── */
 @media (max-width:768px) {
     .lobbyContainer { align-items:flex-start; padding-top:20px; }
     .lobbyCard { padding:26px 20px; gap:16px; }
@@ -252,12 +285,12 @@
     .controlBtn { width:44px !important; height:44px !important; }
     .endCallBtn { width:48px !important; height:48px !important; }
     .controlBtn svg,.endCallBtn svg { font-size:1.2rem; }
-    .participantTile video { width:45vw; min-width:unset; height:26vw; }
-    .thumbnailTile video { width:110px; height:72px; }
-    .conferenceViewSpotlight { padding:62px 8px 76px; }
+    .conferenceView { bottom:80px; gap:6px; padding:8px; }
+    .thumbnailTile { width:110px; height:72px; }
+    .captionBubble { bottom:84px; font-size:0.8rem; padding:8px 14px; max-width:90vw; }
 }
 
-/* ── RESPONSIVE: PHONE ──────────────────────────────────────────────────── */
+/* ── RESPONSIVE PHONE ───────────────────────────────────────────────────── */
 @media (max-width:480px) {
     .lobbyContainer { padding:12px; }
     .lobbyCard { padding:20px 16px; gap:14px; border-radius:14px; }
@@ -279,10 +312,10 @@
     .reactionBtn { font-size:1.2rem; padding:3px 5px; }
     .meetUserVideo { height:13vh; border-radius:10px; }
     .localVideoWrapper { left:8px; bottom:8vh; }
-    .conferenceView { padding:62px 8px 8px; gap:8px; }
-    .participantTile video { width:calc(100vw - 16px); min-width:unset; height:30vw; }
-    .conferenceViewSpotlight { padding:58px 8px 72px; gap:8px; }
-    .thumbnailTile video { width:90px; height:58px; }
+    /* On phones, the grid always stacks to single column */
+    .conferenceView { bottom:72px; gap:6px; padding:6px; }
+    .conferenceView > .participantTile { min-height:42vw; }
+    .thumbnailTile { width:90px; height:58px; }
     .pinnedLabel { font-size:0.65rem; padding:3px 8px; }
     .toast { font-size:0.74rem; padding:6px 12px; }
     .emptyTitle { font-size:0.88rem; }
@@ -290,142 +323,8 @@
     .emptyPulse { width:54px; height:54px; }
     .hostParticipantActions { gap:4px; }
     .hostActionBtn { padding:4px 8px; font-size:0.82rem; }
-
-    /* NEW: captions / shortcuts / more-menu on phone */
-    .captionBubble { bottom:84px; font-size:0.8rem; padding:8px 14px; max-width:90vw; }
+    .captionBubble { bottom:78px; font-size:0.78rem; padding:7px 12px; max-width:90vw; }
     .moreMenu { min-width:180px; }
     .moreMenuItem { font-size:0.78rem; padding:8px 10px; }
     .shortcutsPanel { padding:6px 16px 14px; }
-}
-
-
-/* ─────────────────────────────────────────────────────────────────────────
-   NEW: LIVE CAPTIONS
-───────────────────────────────────────────────────────────────────────── */
-.captionBubble {
-    position:absolute;
-    bottom:96px;
-    left:50%;
-    transform:translateX(-50%);
-    max-width:min(640px, 80vw);
-    background:rgba(8,12,40,0.88);
-    backdrop-filter:blur(10px);
-    -webkit-backdrop-filter:blur(10px);
-    color:rgba(255,255,255,0.95);
-    font-size:0.92rem;
-    line-height:1.45;
-    padding:10px 18px;
-    border-radius:14px;
-    border:1px solid rgba(255,255,255,0.1);
-    box-shadow:0 8px 24px rgba(0,0,0,0.4);
-    text-align:center;
-    z-index:480;
-    animation:captionIn 0.2s ease;
-    pointer-events:none;
-}
-.captionName { color:#60a5fa; font-weight:600; margin-right:2px; }
-@keyframes captionIn { from{opacity:0;transform:translateX(-50%) translateY(6px);} to{opacity:1;transform:translateX(-50%) translateY(0);} }
-
-/* ─────────────────────────────────────────────────────────────────────────
-   NEW: KEYBOARD SHORTCUTS HELP MODAL
-───────────────────────────────────────────────────────────────────────── */
-.shortcutsOverlay {
-    position:absolute; inset:0;
-    background:rgba(0,0,0,0.6);
-    display:flex; align-items:center; justify-content:center;
-    z-index:700;
-    animation:fadeIn 0.15s ease;
-}
-.shortcutsPanel {
-    background:rgba(10,14,55,0.98);
-    border:1px solid rgba(255,255,255,0.1);
-    border-radius:16px;
-    padding:8px 22px 18px;
-    width:min(360px, 88vw);
-    backdrop-filter:blur(16px);
-    -webkit-backdrop-filter:blur(16px);
-    box-shadow:0 16px 48px rgba(0,0,0,0.5);
-    animation:shortcutsPop 0.18s ease;
-}
-@keyframes shortcutsPop { from{opacity:0;transform:scale(0.94);} to{opacity:1;transform:scale(1);} }
-.shortcutsPanelHeader {
-    display:flex; align-items:center; justify-content:space-between;
-    padding:12px 2px 14px;
-    border-bottom:1px solid rgba(255,255,255,0.08);
-    margin-bottom:12px;
-    color:#fff; font-size:0.95rem; font-weight:600;
-}
-.shortcutRow {
-    display:flex; align-items:center; gap:14px;
-    padding:9px 2px;
-    color:rgba(255,255,255,0.78);
-    font-size:0.85rem;
-}
-.kbd {
-    display:inline-flex; align-items:center; justify-content:center;
-    min-width:38px; height:28px; padding:0 10px;
-    background:rgba(255,255,255,0.09);
-    border:1px solid rgba(255,255,255,0.18);
-    border-bottom:2px solid rgba(255,255,255,0.22);
-    border-radius:7px;
-    color:#fff; font-family:'Courier New',Courier,monospace;
-    font-size:0.78rem; font-weight:600;
-    flex-shrink:0;
-}
-
-/* ─────────────────────────────────────────────────────────────────────────
-   NEW: MORE MENU (Record / Captions / Blur / PiP / Shortcuts)
-───────────────────────────────────────────────────────────────────────── */
-.controlBtn { position:relative; } /* anchor for the active-feature dot */
-
-.moreMenuArea { position:relative; }
-
-.moreMenu {
-    position:absolute;
-    bottom:62px;
-    left:50%;
-    transform:translateX(-50%);
-    background:rgba(8,12,55,0.97);
-    border:1px solid rgba(255,255,255,0.12);
-    border-radius:16px;
-    padding:6px;
-    display:flex;
-    flex-direction:column;
-    gap:1px;
-    min-width:200px;
-    backdrop-filter:blur(16px);
-    -webkit-backdrop-filter:blur(16px);
-    box-shadow:0 10px 32px rgba(0,0,0,0.5);
-    animation:pickerPop 0.18s ease;
-    z-index:120;
-}
-
-.moreMenuItem {
-    display:flex;
-    align-items:center;
-    gap:10px;
-    background:transparent;
-    border:none;
-    color:rgba(255,255,255,0.85);
-    font-family:inherit;
-    font-size:0.82rem;
-    padding:9px 12px;
-    border-radius:9px;
-    cursor:pointer;
-    text-align:left;
-    transition:background 0.15s;
-    white-space:nowrap;
-}
-.moreMenuItem:hover     { background:rgba(255,255,255,0.09); }
-.moreMenuItem:disabled  { opacity:0.35; cursor:not-allowed; }
-.moreMenuItem:disabled:hover { background:transparent; }
-.moreMenuItem svg       { font-size:1.15rem; flex-shrink:0; }
-
-.moreActiveDot {
-    position:absolute;
-    top:6px; right:6px;
-    width:8px; height:8px;
-    border-radius:50%;
-    background:#3b82f6;
-    box-shadow:0 0 0 2px rgba(8,12,55,0.9);
 }

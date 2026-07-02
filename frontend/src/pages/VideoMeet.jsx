@@ -14,9 +14,6 @@ import ChatIcon from '@mui/icons-material/Chat'
 import PeopleAltIcon from '@mui/icons-material/PeopleAlt'
 import ClosedCaptionIcon from '@mui/icons-material/ClosedCaption'
 import ClosedCaptionOffIcon from '@mui/icons-material/ClosedCaptionOff'
-import BlurOnIcon from '@mui/icons-material/BlurOn'
-import BlurOffIcon from '@mui/icons-material/BlurOff'
-import PictureInPictureAltIcon from '@mui/icons-material/PictureInPictureAlt'
 import KeyboardIcon from '@mui/icons-material/Keyboard'
 import MoreVertIcon from '@mui/icons-material/MoreVert'
 import server from '../environment';
@@ -38,19 +35,11 @@ export default function VideoMeetComponent() {
     const recordedChunksRef = useRef([]);
     const isHostRef         = useRef(false);
     const meetingLockedRef  = useRef(false);
-
-    // NEW refs for the 4 new features
-    const recognitionRef       = useRef(null);   // SpeechRecognition instance
-    const captionsOnRef        = useRef(false);  // mirrors captionsOn for use inside recognition callbacks
-    const audioRef             = useRef(false);  // mirrors audio (mic) state for use inside recognition callbacks
+    const recognitionRef       = useRef(null);
+    const captionsOnRef        = useRef(false);
+    const audioRef             = useRef(false);
     const captionClearTimeoutRef = useRef(null);
-    const remoteVideoElsRef    = useRef({});     // socketId -> <video> DOM node, used by Picture-in-Picture
-    const pushToTalkRef        = useRef(false);  // tracks a temporary unmute triggered by holding Space
-    const originalVideoTrackRef = useRef(null);  // raw camera track, kept aside while background blur is active
-    const blurCanvasTempVideoRef = useRef(null); // offscreen <video> that feeds the blur canvas
-    const blurAnimationRef     = useRef(null);   // requestAnimationFrame id for the blur loop
-    const blurredStreamRef     = useRef(null);   // MediaStream produced by canvas.captureStream()
-    const backgroundBlurRef    = useRef(false);  // mirrors backgroundBlur for use inside the rAF loop closure
+    const pushToTalkRef        = useRef(false);
 
     let [videoAvailable,  setVideoAvailable]  = useState(true);
     let [audioAvailable,  setAudioAvailable]  = useState(true);
@@ -85,7 +74,6 @@ export default function VideoMeetComponent() {
     let [selectedCamera,  setSelectedCamera]  = useState('');
     let [selectedMic,     setSelectedMic]     = useState('');
 
-    // HOST STATES
     let [isHost,           setIsHost]           = useState(false);
     let [hostSocketId,     setHostSocketId]     = useState(null);
     let [meetingLocked,    setMeetingLocked]    = useState(false);
@@ -95,26 +83,21 @@ export default function VideoMeetComponent() {
     let [remoteStates,     setRemoteStates]     = useState({});
     let [confirmKick,      setConfirmKick]      = useState(null);
 
-    // NEW STATES — captions / PiP / blur / shortcuts / more-menu
-    let [captionsOn,       setCaptionsOn]       = useState(false);
-    let [activeCaption,    setActiveCaption]    = useState(null);   // { name, text }
-    let [pipActive,        setPipActive]        = useState(false);
-    let [backgroundBlur,   setBackgroundBlur]   = useState(false);
-    let [showShortcutsHelp,setShowShortcutsHelp]= useState(false);
-    let [showMoreMenu,     setShowMoreMenu]     = useState(false);
+    let [captionsOn,        setCaptionsOn]        = useState(false);
+    let [activeCaption,     setActiveCaption]     = useState(null);
+    let [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
+    let [showMoreMenu,      setShowMoreMenu]      = useState(false);
 
-    useEffect(() => { isHostRef.current       = isHost;        }, [isHost]);
-    useEffect(() => { meetingLockedRef.current = meetingLocked; }, [meetingLocked]);
-    useEffect(() => { audioRef.current         = audio;         }, [audio]);
+    useEffect(() => { isHostRef.current        = isHost;        }, [isHost]);
+    useEffect(() => { meetingLockedRef.current  = meetingLocked; }, [meetingLocked]);
+    useEffect(() => { audioRef.current          = audio;         }, [audio]);
 
     useEffect(() => { getPermissions(); }, []);
 
-    // cleanup on unmount — now also tears down captions / blur loop
     useEffect(() => {
         return () => {
             if (timerRef.current)         clearInterval(timerRef.current);
             if (speakingInterval.current) clearInterval(speakingInterval.current);
-            if (blurAnimationRef.current) cancelAnimationFrame(blurAnimationRef.current);
             if (recognitionRef.current) {
                 try { recognitionRef.current.onend = null; recognitionRef.current.stop(); } catch (e) {}
             }
@@ -153,51 +136,28 @@ export default function VideoMeetComponent() {
         });
     }, [videos]);
 
-    // NEW: reset Picture-in-Picture button state if the floating window is closed via OS controls
-    useEffect(() => {
-        const onLeavePiP = () => setPipActive(false);
-        document.addEventListener('leavepictureinpicture', onLeavePiP);
-        return () => document.removeEventListener('leavepictureinpicture', onLeavePiP);
-    }, []);
-
-    // NEW: keyboard shortcuts — M mute, V camera, C chat, Space = push-to-talk. Only active during the meeting.
+    // Keyboard shortcuts
     useEffect(() => {
         if (askForUsername) return;
-
         const handleKeyDown = (e) => {
             const tag = document.activeElement && document.activeElement.tagName;
-            if (tag === 'INPUT' || tag === 'TEXTAREA') return; // never hijack typing
-
+            if (tag === 'INPUT' || tag === 'TEXTAREA') return;
             if (e.code === 'Space') {
                 e.preventDefault();
-                if (!e.repeat && !audio) {
-                    pushToTalkRef.current = true;
-                    setAudio(true);
-                }
+                if (!e.repeat && !audio) { pushToTalkRef.current = true; setAudio(true); }
                 return;
             }
             const key = e.key.toLowerCase();
-            if (key === 'm') { handleAudio(); }
-            else if (key === 'v') { handleVideo(); }
-            else if (key === 'c') {
-                if (showChat) closeSidePanel();
-                else openSidePanel('chat');
-            }
+            if      (key === 'm') handleAudio();
+            else if (key === 'v') handleVideo();
+            else if (key === 'c') { if (showChat) closeSidePanel(); else openSidePanel('chat'); }
         };
-
         const handleKeyUp = (e) => {
-            if (e.code === 'Space' && pushToTalkRef.current) {
-                pushToTalkRef.current = false;
-                setAudio(false);
-            }
+            if (e.code === 'Space' && pushToTalkRef.current) { pushToTalkRef.current = false; setAudio(false); }
         };
-
         window.addEventListener('keydown', handleKeyDown);
         window.addEventListener('keyup', handleKeyUp);
-        return () => {
-            window.removeEventListener('keydown', handleKeyDown);
-            window.removeEventListener('keyup', handleKeyUp);
-        };
+        return () => { window.removeEventListener('keydown', handleKeyDown); window.removeEventListener('keyup', handleKeyUp); };
     }, [askForUsername, audio, video, showChat, showParticipants]);
 
     const startSpeakingDetection = (socketId, stream) => {
@@ -270,7 +230,7 @@ export default function VideoMeetComponent() {
                 const blob = new Blob(recordedChunksRef.current, { type: 'video/webm' });
                 const url  = URL.createObjectURL(blob);
                 const a    = document.createElement('a');
-                a.href     = url;
+                a.href = url;
                 a.download = `DConnect-${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}.webm`;
                 document.body.appendChild(a); a.click(); document.body.removeChild(a);
                 URL.revokeObjectURL(url);
@@ -368,8 +328,7 @@ export default function VideoMeetComponent() {
         addToast('Host role transferred', 'hand');
     };
 
-    // ── NEW: LIVE CAPTIONS ──────────────────────────────────────────────────
-
+    // LIVE CAPTIONS
     const showCaptionBubble = (name, text) => {
         setActiveCaption({ name, text });
         if (captionClearTimeoutRef.current) clearTimeout(captionClearTimeoutRef.current);
@@ -378,31 +337,18 @@ export default function VideoMeetComponent() {
 
     const toggleCaptions = () => {
         const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
-        if (!SpeechRecognitionAPI) {
-            addToast('Captions not supported in this browser', 'leave');
-            return;
-        }
+        if (!SpeechRecognitionAPI) { addToast('Captions not supported in this browser', 'leave'); return; }
         if (captionsOn) {
             captionsOnRef.current = false;
-            if (recognitionRef.current) {
-                try { recognitionRef.current.onend = null; recognitionRef.current.stop(); } catch (e) {}
-                recognitionRef.current = null;
-            }
-            setCaptionsOn(false);
-            setActiveCaption(null);
-            return;
+            if (recognitionRef.current) { try { recognitionRef.current.onend = null; recognitionRef.current.stop(); } catch (e) {} recognitionRef.current = null; }
+            setCaptionsOn(false); setActiveCaption(null); return;
         }
         try {
             const recognition = new SpeechRecognitionAPI();
-            recognition.continuous = true;
-            recognition.interimResults = true;
-            recognition.lang = 'en-US';
-
-            // Only transcribe while your mic is actually unmuted in the app
+            recognition.continuous = true; recognition.interimResults = true; recognition.lang = 'en-US';
             recognition.onresult = (event) => {
                 if (!audioRef.current) return;
-                let interimText = '';
-                let finalText = '';
+                let interimText = '', finalText = '';
                 for (let i = event.resultIndex; i < event.results.length; i++) {
                     const transcript = event.results[i][0].transcript;
                     if (event.results[i].isFinal) finalText += transcript;
@@ -411,184 +357,19 @@ export default function VideoMeetComponent() {
                 if (finalText.trim()) {
                     showCaptionBubble(username, finalText.trim());
                     if (socketRef.current) socketRef.current.emit('chat-message', `__CAPTION__:${finalText.trim()}`, username);
-                } else if (interimText.trim()) {
-                    showCaptionBubble(username, interimText.trim());
-                }
+                } else if (interimText.trim()) { showCaptionBubble(username, interimText.trim()); }
             };
-
             recognition.onerror = (e) => {
                 if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
                     addToast('Microphone access needed for captions', 'leave');
-                    captionsOnRef.current = false;
-                    setCaptionsOn(false);
+                    captionsOnRef.current = false; setCaptionsOn(false);
                 }
             };
-
-            // Browsers sometimes stop recognition after a pause — restart it automatically while captions are on
-            recognition.onend = () => {
-                if (captionsOnRef.current) {
-                    try { recognition.start(); } catch (e) {}
-                }
-            };
-
-            recognitionRef.current = recognition;
-            captionsOnRef.current = true;
-            recognition.start();
-            setCaptionsOn(true);
-            addToast('Captions turned on 💬', 'join');
-        } catch (e) {
-            addToast('Could not start captions', 'leave');
-        }
+            recognition.onend = () => { if (captionsOnRef.current) try { recognition.start(); } catch (e) {} };
+            recognitionRef.current = recognition; captionsOnRef.current = true;
+            recognition.start(); setCaptionsOn(true); addToast('Captions turned on 💬', 'join');
+        } catch (e) { addToast('Could not start captions', 'leave'); }
     };
-
-    // ── NEW: PICTURE-IN-PICTURE ─────────────────────────────────────────────
-
-    const handlePiP = async () => {
-        if (!document.pictureInPictureEnabled) {
-            addToast('Picture-in-Picture not supported here', 'leave');
-            return;
-        }
-        if (document.pictureInPictureElement) {
-            try { await document.exitPictureInPicture(); } catch (e) {}
-            setPipActive(false);
-            return;
-        }
-        // Prefer the pinned participant, then whoever is currently speaking, then the first participant
-        let targetId = pinnedId;
-        if (!targetId) targetId = Object.keys(speaking).find(id => id !== 'local' && speaking[id]);
-        if (!targetId && videos.length > 0) targetId = videos[0].socketId;
-
-        const videoEl = remoteVideoElsRef.current[targetId];
-        if (!videoEl || !videoEl.srcObject) {
-            addToast('No participant video available for PiP', 'leave');
-            return;
-        }
-        try {
-            await videoEl.requestPictureInPicture();
-            setPipActive(true);
-        } catch (e) {
-            addToast('Could not start Picture-in-Picture', 'leave');
-        }
-    };
-
-    // ── NEW: BACKGROUND BLUR ─────────────────────────────────────────────────
-    // Basic canvas-based blur (no ML segmentation model): the whole frame is blurred,
-    // then a sharp oval is drawn back in over the centre where a face usually sits.
-
-    const startBackgroundBlur = () => {
-        if (!window.localStream) { addToast('No camera stream available', 'leave'); return; }
-        const videoTrack = window.localStream.getVideoTracks()[0];
-        if (!videoTrack) { addToast('Turn on your camera first', 'leave'); return; }
-        if (typeof HTMLCanvasElement === 'undefined' || !HTMLCanvasElement.prototype.captureStream) {
-            addToast('Background blur not supported here', 'leave');
-            return;
-        }
-        try {
-            originalVideoTrackRef.current = videoTrack;
-
-            const settings = videoTrack.getSettings ? videoTrack.getSettings() : {};
-            const width  = settings.width  || 640;
-            const height = settings.height || 480;
-
-            const canvas = document.createElement('canvas');
-            canvas.width = width;
-            canvas.height = height;
-            const ctx = canvas.getContext('2d');
-
-            const tempVideo = document.createElement('video');
-            tempVideo.srcObject = new MediaStream([videoTrack]);
-            tempVideo.muted = true;
-            tempVideo.playsInline = true;
-            tempVideo.play().catch(() => {});
-            blurCanvasTempVideoRef.current = tempVideo;
-
-            backgroundBlurRef.current = true;
-
-            const drawFrame = () => {
-                if (!backgroundBlurRef.current) return;
-                try {
-                    ctx.filter = 'blur(14px)';
-                    ctx.drawImage(tempVideo, 0, 0, width, height);
-
-                    // sharp oval cut-out roughly where a face sits
-                    ctx.save();
-                    ctx.beginPath();
-                    const cx = width / 2, cy = height * 0.42, rx = width * 0.23, ry = height * 0.34;
-                    ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
-                    ctx.closePath();
-                    ctx.clip();
-                    ctx.filter = 'none';
-                    ctx.drawImage(tempVideo, 0, 0, width, height);
-                    ctx.restore();
-                } catch (e) {}
-                blurAnimationRef.current = requestAnimationFrame(drawFrame);
-            };
-            drawFrame();
-
-            const canvasStream = canvas.captureStream(24);
-            const blurredTrack = canvasStream.getVideoTracks()[0];
-            blurredStreamRef.current = canvasStream;
-
-            window.localStream.removeTrack(videoTrack);
-            window.localStream.addTrack(blurredTrack);
-            if (localVideoref.current) localVideoref.current.srcObject = window.localStream;
-
-            // swap the outgoing track on every live peer connection without a full renegotiation
-            for (let id in connections) {
-                try {
-                    const senders = connections[id].getSenders ? connections[id].getSenders() : [];
-                    const vSender = senders.find(s => s.track && s.track.kind === 'video');
-                    if (vSender) vSender.replaceTrack(blurredTrack).catch(() => {});
-                } catch (e) {}
-            }
-
-            setBackgroundBlur(true);
-            addToast('Background blur on', 'join');
-        } catch (e) {
-            addToast('Could not enable background blur', 'leave');
-        }
-    };
-
-    const stopBackgroundBlur = () => {
-        backgroundBlurRef.current = false;
-        if (blurAnimationRef.current) { cancelAnimationFrame(blurAnimationRef.current); blurAnimationRef.current = null; }
-
-        try {
-            const currentTrack = window.localStream ? window.localStream.getVideoTracks()[0] : null;
-            if (originalVideoTrackRef.current && window.localStream) {
-                if (currentTrack) window.localStream.removeTrack(currentTrack);
-                window.localStream.addTrack(originalVideoTrackRef.current);
-                if (localVideoref.current) localVideoref.current.srcObject = window.localStream;
-
-                for (let id in connections) {
-                    try {
-                        const senders = connections[id].getSenders ? connections[id].getSenders() : [];
-                        const vSender = senders.find(s => s.track && s.track.kind === 'video');
-                        if (vSender) vSender.replaceTrack(originalVideoTrackRef.current).catch(() => {});
-                    } catch (e) {}
-                }
-            }
-        } catch (e) {}
-
-        if (blurredStreamRef.current) {
-            try { blurredStreamRef.current.getTracks().forEach(t => t.stop()); } catch (e) {}
-            blurredStreamRef.current = null;
-        }
-        if (blurCanvasTempVideoRef.current) {
-            try { blurCanvasTempVideoRef.current.pause(); blurCanvasTempVideoRef.current.srcObject = null; } catch (e) {}
-            blurCanvasTempVideoRef.current = null;
-        }
-        originalVideoTrackRef.current = null;
-        setBackgroundBlur(false);
-    };
-
-    const toggleBackgroundBlur = () => {
-        if (!video)  { addToast('Turn on your camera first', 'leave'); return; }
-        if (screen)  { addToast('Cannot blur while screen sharing', 'leave'); return; }
-        if (backgroundBlur) stopBackgroundBlur(); else startBackgroundBlur();
-    };
-
-    // ─────────────────────────────────────────────────────────────────────
 
     const getPermissions = async () => {
         try {
@@ -677,23 +458,18 @@ export default function VideoMeetComponent() {
         socketRef.current = io.connect(server_url, { secure: false });
         socketRef.current.on('signal', gotMessageFromServer);
         socketRef.current.on('disconnect', () => setIsConnected(false));
-
         socketRef.current.on('connect', () => {
             setIsConnected(true);
             socketRef.current.emit('join-call', window.location.href);
             socketIdRef.current = socketRef.current.id;
             socketRef.current.on('chat-message', addMessage);
-
             socketRef.current.on('user-left', (id) => {
-                playSound('leave');
-                addToast('A participant left', 'leave');
+                playSound('leave'); addToast('A participant left', 'leave');
                 setPinnedId(p => p === id ? null : p);
                 setParticipantNames(p => { const n={...p}; delete n[id]; return n; });
                 setRemoteStates(p    => { const n={...p}; delete n[id]; return n; });
-                delete remoteVideoElsRef.current[id];
                 setVideos(vs => vs.filter(v => v.socketId !== id));
             });
-
             socketRef.current.on('user-joined', (id, clients) => {
                 if (id === socketIdRef.current && clients.length === 1) {
                     setIsHost(true); isHostRef.current = true; setHostSocketId(socketIdRef.current);
@@ -702,8 +478,7 @@ export default function VideoMeetComponent() {
                 if (id !== socketIdRef.current) {
                     if (isHostRef.current && meetingLockedRef.current)
                         setTimeout(() => socketRef.current.emit('chat-message', `__HOST_KICK__:${id}`, username), 600);
-                    playSound('join');
-                    addToast('A participant joined', 'join');
+                    playSound('join'); addToast('A participant joined', 'join');
                     setTimeout(() => {
                         socketRef.current.emit('chat-message', `__USERNAME__:${username}`, username);
                         if (isHostRef.current) socketRef.current.emit('chat-message', `__HOST_CLAIM__:${socketIdRef.current}`, username);
@@ -742,29 +517,17 @@ export default function VideoMeetComponent() {
         return Object.assign(c.captureStream().getVideoTracks()[0],{enabled:false});
     };
 
-    // MODIFIED: turning camera off / starting screen share now also cleanly stops background blur first
-    const handleVideo = () => {
-        if (video && backgroundBlur) stopBackgroundBlur();
-        setVideo(!video);
-    };
+    const handleVideo  = () => setVideo(!video);
     const handleAudio  = () => setAudio(!audio);
-    const handleScreen = () => {
-        if (!screen && backgroundBlur) stopBackgroundBlur();
-        setScreen(!screen);
-    };
+    const handleScreen = () => setScreen(!screen);
 
     useEffect(() => { if (screen !== undefined) getDislayMedia(); }, [screen]);
 
-    // MODIFIED: also stops captions, blur loop, and exits PiP cleanly on hang up
     const handleEndCall = () => {
         if (timerRef.current) clearInterval(timerRef.current);
         if (isRecording) stopRecording();
-        if (backgroundBlur) stopBackgroundBlur();
         if (captionsOnRef.current && recognitionRef.current) {
             try { recognitionRef.current.onend = null; recognitionRef.current.stop(); } catch (e) {}
-        }
-        if (document.pictureInPictureElement) {
-            try { document.exitPictureInPicture(); } catch (e) {}
         }
         Object.values(analysersRef.current).forEach(({audioCtx}) => { try { audioCtx.close(); } catch(e) {} });
         analysersRef.current = {};
@@ -773,26 +536,24 @@ export default function VideoMeetComponent() {
     };
 
     const addMessage = (data, sender, socketIdSender) => {
-        // Track name
         if (socketIdSender && sender && !data.startsWith('__'))
             setParticipantNames(p => ({...p,[socketIdSender]:sender}));
 
-        if (data.startsWith('__USERNAME__:'))       { setParticipantNames(p=>({...p,[socketIdSender]:sender})); return; }
-        if (data.startsWith('__HOST_CLAIM__:'))      { const id=data.replace('__HOST_CLAIM__:',''); setHostSocketId(id); if(id===socketIdRef.current){setIsHost(true);isHostRef.current=true;} return; }
-        if (data.startsWith('__HOST_TRANSFER__:'))   {
+        if (data.startsWith('__USERNAME__:'))      { setParticipantNames(p=>({...p,[socketIdSender]:sender})); return; }
+        if (data.startsWith('__HOST_CLAIM__:'))     { const id=data.replace('__HOST_CLAIM__:',''); setHostSocketId(id); if(id===socketIdRef.current){setIsHost(true);isHostRef.current=true;} return; }
+        if (data.startsWith('__HOST_TRANSFER__:'))  {
             const nid=data.replace('__HOST_TRANSFER__:',''); setHostSocketId(nid);
             if(nid===socketIdRef.current){setIsHost(true);isHostRef.current=true;addToast('You are now the host 👑','hand');playSound('alert');}
             else if(socketIdSender===socketIdRef.current){setIsHost(false);isHostRef.current=false;} return; }
-        if (data.startsWith('__HOST_MUTE_MIC__:'))   { const tid=data.replace('__HOST_MUTE_MIC__:',''); if(tid===socketIdRef.current||tid==='all'){setAudio(false);if(window.localStream)window.localStream.getAudioTracks().forEach(t=>{t.enabled=false;});addToast('Host muted your microphone 🔇','leave');playSound('alert');} return; }
-        if (data === '__HOST_MUTE_ALL__')             { if(socketIdSender!==socketIdRef.current){setAudio(false);if(window.localStream)window.localStream.getAudioTracks().forEach(t=>{t.enabled=false;});addToast('Host muted all microphones 🔇','leave');playSound('alert');} return; }
-        if (data.startsWith('__HOST_UNMUTE_REQ__:'))  { const tid=data.replace('__HOST_UNMUTE_REQ__:',''); if(tid===socketIdRef.current){addToast('Host is asking you to unmute 🎙️','hand');playSound('alert');} return; }
-        if (data.startsWith('__HOST_MUTE_CAM__:'))    { const tid=data.replace('__HOST_MUTE_CAM__:',''); if(tid===socketIdRef.current){setVideo(false);if(window.localStream)window.localStream.getVideoTracks().forEach(t=>{t.enabled=false;});addToast('Host turned off your camera 📷','leave');playSound('alert');} return; }
-        if (data.startsWith('__HOST_KICK__:'))         { const tid=data.replace('__HOST_KICK__:',''); if(tid===socketIdRef.current){addToast('You have been removed from the meeting','leave');playSound('leave');setTimeout(()=>handleEndCall(),1800);} return; }
-        if (data.startsWith('__HOST_LOCK__:'))         { const locked=data.replace('__HOST_LOCK__:','')==='true'; setMeetingLocked(locked); meetingLockedRef.current=locked; if(socketIdSender!==socketIdRef.current)addToast(locked?'🔒 Meeting locked by host':'🔓 Meeting unlocked',locked?'leave':'join'); return; }
-        if (data.startsWith('__HAND__:'))             { if(socketIdSender!==socketIdRef.current){const r=data.split(':')[1]==='true'; setRaisedHands(p=>({...p,[socketIdSender]:r})); if(r)addToast(`${sender} raised their hand ✋`,'hand');} return; }
-        if (data.startsWith('__REACTION__:'))          { if(socketIdSender!==socketIdRef.current)triggerReaction(data.split(':')[1]); return; }
-        // NEW: caption broadcast from another participant
-        if (data.startsWith('__CAPTION__:'))           { if(socketIdSender!==socketIdRef.current) showCaptionBubble(sender, data.replace('__CAPTION__:','')); return; }
+        if (data.startsWith('__HOST_MUTE_MIC__:'))  { const tid=data.replace('__HOST_MUTE_MIC__:',''); if(tid===socketIdRef.current){setAudio(false);if(window.localStream)window.localStream.getAudioTracks().forEach(t=>{t.enabled=false;});addToast('Host muted your microphone 🔇','leave');playSound('alert');} return; }
+        if (data === '__HOST_MUTE_ALL__')            { if(socketIdSender!==socketIdRef.current){setAudio(false);if(window.localStream)window.localStream.getAudioTracks().forEach(t=>{t.enabled=false;});addToast('Host muted all microphones 🔇','leave');playSound('alert');} return; }
+        if (data.startsWith('__HOST_UNMUTE_REQ__:')) { const tid=data.replace('__HOST_UNMUTE_REQ__:',''); if(tid===socketIdRef.current){addToast('Host is asking you to unmute 🎙️','hand');playSound('alert');} return; }
+        if (data.startsWith('__HOST_MUTE_CAM__:'))   { const tid=data.replace('__HOST_MUTE_CAM__:',''); if(tid===socketIdRef.current){setVideo(false);if(window.localStream)window.localStream.getVideoTracks().forEach(t=>{t.enabled=false;});addToast('Host turned off your camera 📷','leave');playSound('alert');} return; }
+        if (data.startsWith('__HOST_KICK__:'))        { const tid=data.replace('__HOST_KICK__:',''); if(tid===socketIdRef.current){addToast('You have been removed from the meeting','leave');playSound('leave');setTimeout(()=>handleEndCall(),1800);} return; }
+        if (data.startsWith('__HOST_LOCK__:'))        { const locked=data.replace('__HOST_LOCK__:','')==='true'; setMeetingLocked(locked); meetingLockedRef.current=locked; if(socketIdSender!==socketIdRef.current)addToast(locked?'🔒 Meeting locked by host':'🔓 Meeting unlocked',locked?'leave':'join'); return; }
+        if (data.startsWith('__HAND__:'))            { if(socketIdSender!==socketIdRef.current){const r=data.split(':')[1]==='true'; setRaisedHands(p=>({...p,[socketIdSender]:r})); if(r)addToast(`${sender} raised their hand ✋`,'hand');} return; }
+        if (data.startsWith('__REACTION__:'))         { if(socketIdSender!==socketIdRef.current)triggerReaction(data.split(':')[1]); return; }
+        if (data.startsWith('__CAPTION__:'))          { if(socketIdSender!==socketIdRef.current) showCaptionBubble(sender, data.replace('__CAPTION__:','')); return; }
 
         setParticipantNames(p=>({...p,[socketIdSender]:sender}));
         setMessages(prev=>[...prev,{sender,data,timestamp:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}]);
@@ -813,6 +574,14 @@ export default function VideoMeetComponent() {
 
     const pinnedVideo = videos.find(v => v.socketId === pinnedId);
     const otherVideos = videos.filter(v => v.socketId !== pinnedId);
+
+    // FIXED: dynamic grid columns so videos fill the screen properly
+    const getGridColumns = (count) => {
+        if (count === 1) return '1fr';
+        if (count <= 4) return 'repeat(2, 1fr)';
+        if (count <= 9) return 'repeat(3, 1fr)';
+        return 'repeat(4, 1fr)';
+    };
 
     const darkFieldSx = { flex:1,'& .MuiOutlinedInput-root':{color:'#fff',borderRadius:'12px','& fieldset':{borderColor:'rgba(255,255,255,0.15)'},'&:hover fieldset':{borderColor:'rgba(255,255,255,0.3)'},'&.Mui-focused fieldset':{borderColor:'#3b82f6'}},'& .MuiInputLabel-root':{color:'rgba(255,255,255,0.4)'},'& .MuiInputLabel-root.Mui-focused':{color:'#3b82f6'} };
     const lobbyFieldSx = { width:'100%','& .MuiOutlinedInput-root':{color:'#fff',borderRadius:'10px','& fieldset':{borderColor:'rgba(255,255,255,0.2)'},'&:hover fieldset':{borderColor:'rgba(255,255,255,0.4)'},'&.Mui-focused fieldset':{borderColor:'#3b82f6'}},'& .MuiInputLabel-root':{color:'rgba(255,255,255,0.5)'},'& .MuiInputLabel-root.Mui-focused':{color:'#3b82f6'} };
@@ -879,7 +648,7 @@ export default function VideoMeetComponent() {
                     ))}
                 </div>
 
-                {/* NEW: CAPTION BUBBLE */}
+                {/* CAPTION BUBBLE */}
                 {activeCaption&&(
                     <div className={styles.captionBubble}>
                         <span className={styles.captionName}>{activeCaption.name}:</span> {activeCaption.text}
@@ -894,12 +663,9 @@ export default function VideoMeetComponent() {
                             <button className={`${styles.sidePanelTab} ${showChat?styles.sidePanelTabActive:''}`} onClick={()=>openSidePanel('chat')}>💬 Chat {newMessages>0&&!showChat&&<span className={styles.chatBadge}>{newMessages}</span>}</button>
                             <button className={styles.sidePanelClose} onClick={closeSidePanel}>✕</button>
                         </div>
-
-                        {/* PARTICIPANTS TAB */}
                         {showParticipants&&(
                             <div className={styles.participantsContent}>
                                 {isHost&&<div className={styles.hostBulkRow}><button className={styles.hostBulkBtn} onClick={hostMuteAll}>🔇 Mute All</button></div>}
-                                {/* Me */}
                                 <div className={styles.participantItem}>
                                     <div className={styles.participantInfo}>
                                         <span className={styles.participantAvatar}>{username.charAt(0).toUpperCase()}</span>
@@ -910,7 +676,6 @@ export default function VideoMeetComponent() {
                                         {video?<VideocamIcon sx={{fontSize:'1rem',color:'#22c55e'}}/>:<VideocamOffIcon sx={{fontSize:'1rem',color:'#ef4444'}}/>}
                                     </div>
                                 </div>
-                                {/* Others */}
                                 {videos.map(v=>(
                                     <div key={v.socketId}>
                                         <div className={styles.participantItem}>
@@ -927,10 +692,10 @@ export default function VideoMeetComponent() {
                                             </div>
                                             {isHost&&(
                                                 <div className={styles.hostParticipantActions}>
-                                                    <button className={styles.hostActionBtn} onClick={()=>hostMuteMic(v.socketId)}      title="Mute mic">🔇</button>
+                                                    <button className={styles.hostActionBtn} onClick={()=>hostMuteMic(v.socketId)} title="Mute mic">🔇</button>
                                                     <button className={styles.hostActionBtn} onClick={()=>hostUnmuteMicReq(v.socketId)} title="Ask unmute">🎙️</button>
-                                                    <button className={styles.hostActionBtn} onClick={()=>hostMuteCamera(v.socketId)}   title="Turn off cam">📷</button>
-                                                    <button className={styles.hostActionBtn} onClick={()=>hostTransfer(v.socketId)}     title="Make host">👑</button>
+                                                    <button className={styles.hostActionBtn} onClick={()=>hostMuteCamera(v.socketId)} title="Turn off cam">📷</button>
+                                                    <button className={styles.hostActionBtn} onClick={()=>hostTransfer(v.socketId)} title="Make host">👑</button>
                                                     <button className={`${styles.hostActionBtn} ${styles.hostKickBtn}`} onClick={()=>setConfirmKick(v.socketId)} title="Remove">✕</button>
                                                 </div>
                                             )}
@@ -946,8 +711,6 @@ export default function VideoMeetComponent() {
                                 ))}
                             </div>
                         )}
-
-                        {/* CHAT TAB */}
                         {showChat&&(
                             <div className={styles.chatContent}>
                                 <div className={styles.chattingDisplay}>
@@ -969,7 +732,7 @@ export default function VideoMeetComponent() {
                     </div>
                 )}
 
-                {/* NEW: KEYBOARD SHORTCUTS HELP MODAL */}
+                {/* KEYBOARD SHORTCUTS MODAL */}
                 {showShortcutsHelp&&(
                     <div className={styles.shortcutsOverlay} onClick={()=>setShowShortcutsHelp(false)}>
                         <div className={styles.shortcutsPanel} onClick={e=>e.stopPropagation()}>
@@ -998,7 +761,7 @@ export default function VideoMeetComponent() {
                             <IconButton onClick={()=>setShowReactions(!showReactions)} className={`${styles.controlBtn} ${showReactions?styles.controlBtnActive:''}`} title="Reactions"><span style={{fontSize:'1.25rem',lineHeight:1}}>😊</span></IconButton>
                         </div>
 
-                        {/* NEW: MORE MENU — Record / Captions / Background Blur / Picture-in-Picture / Shortcuts */}
+                        {/* MORE MENU — Record / Captions / Shortcuts only */}
                         <div className={styles.moreMenuArea}>
                             {showMoreMenu&&(
                                 <div className={styles.moreMenu}>
@@ -1010,14 +773,6 @@ export default function VideoMeetComponent() {
                                         {captionsOn?<ClosedCaptionIcon/>:<ClosedCaptionOffIcon/>}
                                         <span>{captionsOn?'Captions: On':'Turn On Captions'}</span>
                                     </button>
-                                    <button className={styles.moreMenuItem} disabled={!video||screen===true} onClick={()=>{toggleBackgroundBlur();setShowMoreMenu(false);}}>
-                                        {backgroundBlur?<BlurOffIcon/>:<BlurOnIcon/>}
-                                        <span>{backgroundBlur?'Blur: On':'Background Blur'}</span>
-                                    </button>
-                                    <button className={styles.moreMenuItem} onClick={()=>{handlePiP();setShowMoreMenu(false);}}>
-                                        <PictureInPictureAltIcon/>
-                                        <span>Picture-in-Picture</span>
-                                    </button>
                                     <button className={styles.moreMenuItem} onClick={()=>{setShowShortcutsHelp(true);setShowMoreMenu(false);}}>
                                         <KeyboardIcon/>
                                         <span>Keyboard Shortcuts</span>
@@ -1026,7 +781,7 @@ export default function VideoMeetComponent() {
                             )}
                             <IconButton onClick={()=>setShowMoreMenu(!showMoreMenu)} className={`${styles.controlBtn} ${showMoreMenu?styles.controlBtnActive:''}`} title="More options">
                                 <MoreVertIcon/>
-                                {(isRecording||captionsOn||backgroundBlur)&&<span className={styles.moreActiveDot}></span>}
+                                {(isRecording||captionsOn)&&<span className={styles.moreActiveDot}></span>}
                             </IconButton>
                         </div>
 
@@ -1048,11 +803,11 @@ export default function VideoMeetComponent() {
                 {/* EMPTY STATE */}
                 {videos.length===0&&(<div className={styles.emptyState}><div className={styles.emptyPulse}></div><p className={styles.emptyTitle}>Waiting for others to join...</p><p className={styles.emptySub}>Share code <strong>{getRoomName()}</strong> to invite</p></div>)}
 
-                {/* TILES */}
+                {/* PARTICIPANT TILES — SPOTLIGHT */}
                 {pinnedVideo?(
                     <div className={styles.conferenceViewSpotlight}>
                         <div className={`${styles.pinnedTile} ${speaking[pinnedVideo.socketId]?styles.speakingTile:''}`} onClick={()=>handlePin(pinnedVideo.socketId)} title="Click to unpin">
-                            <video data-socket={pinnedVideo.socketId} ref={ref=>{if(ref){remoteVideoElsRef.current[pinnedVideo.socketId]=ref;if(pinnedVideo.stream)ref.srcObject=pinnedVideo.stream;}}} autoPlay></video>
+                            <video data-socket={pinnedVideo.socketId} ref={ref=>{if(ref&&pinnedVideo.stream)ref.srcObject=pinnedVideo.stream;}} autoPlay></video>
                             {raisedHands[pinnedVideo.socketId]&&<span className={styles.handBadge}>✋</span>}
                             <span className={styles.pinnedLabel}>📌 {getName(pinnedVideo.socketId)} — click to unpin</span>
                         </div>
@@ -1060,7 +815,7 @@ export default function VideoMeetComponent() {
                             <div className={styles.thumbnailStrip}>
                                 {otherVideos.map(v=>(
                                     <div key={v.socketId} className={`${styles.thumbnailTile} ${speaking[v.socketId]?styles.thumbnailSpeaking:''}`} onClick={()=>handlePin(v.socketId)}>
-                                        <video data-socket={v.socketId} ref={ref=>{if(ref){remoteVideoElsRef.current[v.socketId]=ref;if(v.stream)ref.srcObject=v.stream;}}} autoPlay></video>
+                                        <video data-socket={v.socketId} ref={ref=>{if(ref&&v.stream)ref.srcObject=v.stream;}} autoPlay></video>
                                         {raisedHands[v.socketId]&&<span className={styles.handBadgeSm}>✋</span>}
                                     </div>
                                 ))}
@@ -1068,17 +823,21 @@ export default function VideoMeetComponent() {
                         )}
                     </div>
                 ):(
-                    <div className={styles.conferenceView}>
+                    /* FIXED: proper full-screen grid that adapts per participant count */
+                    <div
+                        className={styles.conferenceView}
+                        style={{ gridTemplateColumns: getGridColumns(videos.length) }}
+                    >
                         {videos.map(v=>(
                             <div key={v.socketId} className={`${styles.participantTile} ${speaking[v.socketId]?styles.speakingTile:''}`}>
-                                <video data-socket={v.socketId} ref={ref=>{if(ref){remoteVideoElsRef.current[v.socketId]=ref;if(v.stream)ref.srcObject=v.stream;}}} autoPlay></video>
+                                <video data-socket={v.socketId} ref={ref=>{if(ref&&v.stream)ref.srcObject=v.stream;}} autoPlay></video>
                                 {raisedHands[v.socketId]&&<span className={styles.handBadge}>✋</span>}
                                 {v.socketId===hostSocketId&&<span className={styles.tileHostBadge}>👑</span>}
                                 <span className={styles.tileName}>{getName(v.socketId)}</span>
                                 <span className={styles.pinHint} onClick={()=>handlePin(v.socketId)}>📌</span>
                                 {isHost&&(
                                     <div className={styles.hostTileOverlay}>
-                                        <button className={styles.hostTileBtn} onClick={()=>hostMuteMic(v.socketId)}    title="Mute">🔇</button>
+                                        <button className={styles.hostTileBtn} onClick={()=>hostMuteMic(v.socketId)} title="Mute">🔇</button>
                                         <button className={styles.hostTileBtn} onClick={()=>hostMuteCamera(v.socketId)} title="Cam off">📷</button>
                                         <button className={`${styles.hostTileBtn} ${styles.hostTileKick}`} onClick={()=>setConfirmKick(v.socketId)} title="Remove">✕</button>
                                     </div>
@@ -1095,7 +854,7 @@ export default function VideoMeetComponent() {
                     </div>
                 )}
 
-                {/* REACTIONS */}
+                {/* FLOATING REACTIONS */}
                 {activeReactions.map(r=>(
                     <div key={r.id} className={styles.floatingReaction} style={{left:`${r.x}%`}}>{r.emoji}</div>
                 ))}
