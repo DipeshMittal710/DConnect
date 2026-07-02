@@ -5,6 +5,15 @@ import { Link, useNavigate } from "react-router-dom";
 export default function LandingPage() {
   const router = useNavigate();
 
+  const joinAsGuest = () => {
+    const guestCode = Math.random()
+      .toString(36)
+      .substring(2, 8)
+      .toUpperCase();
+
+    router(`/${guestCode}`);
+  };
+
   return (
     <div className="landingPageContainer">
       <nav>
@@ -13,7 +22,7 @@ export default function LandingPage() {
         </div>
 
         <div className="navlist">
-          <p onClick={() => router("/aljk23")}>Join as Guest</p>
+          <p onClick={joinAsGuest}>Join as Guest</p>
           <p onClick={() => router("/auth")}>Register</p>
           <div onClick={() => router("/auth")} role="button">
             <p>Login</p>
@@ -31,7 +40,7 @@ export default function LandingPage() {
           <p>Cover a distance by DConnect</p>
 
           <div role="button">
-            <Link to={"/auth"}>Get Started</Link>
+            <Link to="/auth">Get Started</Link>
           </div>
         </div>
 

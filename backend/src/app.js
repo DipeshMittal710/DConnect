@@ -1,3 +1,4 @@
+import "dotenv/config";
 import express from "express";
 import { createServer } from "node:http";
 
@@ -13,6 +14,9 @@ const app = express();
 const server = createServer(app);
 const io = connectToSocket(server);
 
+if (!process.env.MONGO_URI) {
+    throw new Error("MONGO_URI is not defined in the .env file");
+}
 
 app.set("port", (process.env.PORT || 8000))
 app.use(cors());
@@ -23,7 +27,7 @@ app.use("/api/v1/users", userRoutes);
 
 const start = async () => {
     app.set("mongo_user")
-    const connectionDb = await mongoose.connect("mongodb://dipeshmittal71006_db_user:Deepu7102006@ac-zufwo5w-shard-00-00.yxna5mq.mongodb.net:27017,ac-zufwo5w-shard-00-01.yxna5mq.mongodb.net:27017,ac-zufwo5w-shard-00-02.yxna5mq.mongodb.net:27017/?ssl=true&replicaSet=atlas-4kq353-shard-0&authSource=admin&appName=Cluster0")
+    const connectionDb = await mongoose.connect(process.env.MONGO_URI);
 
     console.log(`MONGO Connected DB HOst: ${connectionDb.connection.host}`)
     server.listen(app.get("port"), () => {
