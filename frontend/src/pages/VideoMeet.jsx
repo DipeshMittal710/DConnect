@@ -25,21 +25,25 @@ const peerConfigConnections = { "iceServers": [{ "urls": "stun:stun.l.google.com
 
 export default function VideoMeetComponent() {
 
-    var socketRef           = useRef();
-    let socketIdRef         = useRef();
-    let localVideoref       = useRef();
-    let timerRef            = useRef(null);
-    const analysersRef      = useRef({});
-    const speakingInterval  = useRef(null);
-    const mediaRecorderRef  = useRef(null);
-    const recordedChunksRef = useRef([]);
-    const isHostRef         = useRef(false);
-    const meetingLockedRef  = useRef(false);
+    var socketRef              = useRef();
+    let socketIdRef            = useRef();
+    let localVideoref          = useRef();
+    let timerRef               = useRef(null);
+    const analysersRef         = useRef({});
+    const speakingInterval     = useRef(null);
+    const mediaRecorderRef     = useRef(null);
+    const recordedChunksRef    = useRef([]);
+    const recordingRAFRef      = useRef(null);
+    const remoteVideoElsRef    = useRef({});
+    const isHostRef            = useRef(false);
     const recognitionRef       = useRef(null);
     const captionsOnRef        = useRef(false);
     const audioRef             = useRef(false);
     const captionClearTimeoutRef = useRef(null);
     const pushToTalkRef        = useRef(false);
+    // Refs that mirror state values so recording canvas closure always reads fresh values
+    const screenRef            = useRef(false);
+    const usernameRef          = useRef('');
 
     let [videoAvailable,  setVideoAvailable]  = useState(true);
     let [audioAvailable,  setAudioAvailable]  = useState(true);
@@ -67,7 +71,6 @@ export default function VideoMeetComponent() {
     let [activeReactions, setActiveReactions] = useState([]);
     let [lobbyVideoOn,    setLobbyVideoOn]    = useState(true);
     let [lobbyAudioOn,    setLobbyAudioOn]    = useState(true);
-    let [isRecording,     setIsRecording]     = useState(false);
     let [pinnedId,        setPinnedId]        = useState(null);
     let [cameras,         setCameras]         = useState([]);
     let [mics,            setMics]            = useState([]);
@@ -87,10 +90,14 @@ export default function VideoMeetComponent() {
     let [activeCaption,     setActiveCaption]     = useState(null);
     let [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
     let [showMoreMenu,      setShowMoreMenu]      = useState(false);
+    let [isRecording,       setIsRecording]       = useState(false);
+    let [isRemoteRecording, setIsRemoteRecording] = useState(false);
 
-    useEffect(() => { isHostRef.current        = isHost;        }, [isHost]);
-    useEffect(() => { meetingLockedRef.current  = meetingLocked; }, [meetingLocked]);
-    useEffect(() => { audioRef.current          = audio;         }, [audio]);
+    // Keep refs in sync with state so closures (recording RAF, keyboard handler) always read fresh values
+    useEffect(() => { isHostRef.current   = isHost;    }, [isHost]);
+    useEffect(() => { audioRef.current    = audio;     }, [audio]);
+    useEffect(() => { screenRef.current   = screen;    }, [screen]);
+    useEffect(() => { usernameRef.current = username;  }, [username]);
 
     useEffect(() => { getPermissions(); }, []);
 
@@ -98,6 +105,7 @@ export default function VideoMeetComponent() {
         return () => {
             if (timerRef.current)         clearInterval(timerRef.current);
             if (speakingInterval.current) clearInterval(speakingInterval.current);
+            if (recordingRAFRef.current)  cancelAnimationFrame(recordingRAFRef.current);
             if (recognitionRef.current) {
                 try { recognitionRef.current.onend = null; recognitionRef.current.stop(); } catch (e) {}
             }
@@ -132,6 +140,19 @@ export default function VideoMeetComponent() {
             if (id !== 'local' && !videos.find(v => v.socketId === id)) {
                 try { analysersRef.current[id].audioCtx.close(); } catch (e) {}
                 delete analysersRef.current[id];
+            }
+        });
+    }, [videos]);
+
+    // FIXED: when a remote participant starts/stops screen sharing their stream changes.
+    // The React ref callback only fires on mount, so we need this effect to update
+    // the video element's srcObject whenever the stream reference changes.
+    // This ensures recording captures screen shares from remote participants correctly.
+    useEffect(() => {
+        videos.forEach(v => {
+            const el = remoteVideoElsRef.current[v.socketId];
+            if (el && v.stream && el.srcObject !== v.stream) {
+                el.srcObject = v.stream;
             }
         });
     }, [videos]);
@@ -212,21 +233,115 @@ export default function VideoMeetComponent() {
         }
     };
 
+    // FIXED RECORDING: captures ALL participants including screen shares.
+    // - Uses a canvas that draws every video element each frame
+    // - screenRef / usernameRef are used inside the RAF closure so the label
+    //   updates live if screen sharing starts/stops after recording begins
+    // - Remote video elements are synced via the videos useEffect above, so
+    //   screen shares from remote participants show up correctly
     const startRecording = () => {
+        if (!isHost) return;
         try {
+            const W = 1280, H = 720;
+            const canvas = document.createElement('canvas');
+            canvas.width = W; canvas.height = H;
+            const ctx = canvas.getContext('2d');
+
+            const drawFrame = () => {
+                // Build feed list fresh every frame so new joiners / stream changes are included
+                const feeds = [];
+
+                if (localVideoref.current && localVideoref.current.readyState >= 2) {
+                    const label = screenRef.current
+                        ? `${usernameRef.current} 🖥️ Screen`
+                        : `${usernameRef.current} (You)`;
+                    feeds.push({ el: localVideoref.current, label });
+                }
+
+                Object.entries(remoteVideoElsRef.current).forEach(([sid, el]) => {
+                    if (el && el.readyState >= 2) {
+                        feeds.push({ el, label: participantNames[sid] || 'Participant' });
+                    }
+                });
+
+                // Dark background
+                ctx.fillStyle = '#010430';
+                ctx.fillRect(0, 0, W, H);
+
+                if (feeds.length > 0) {
+                    const cols  = feeds.length === 1 ? 1 : feeds.length <= 4 ? 2 : 3;
+                    const rows  = Math.ceil(feeds.length / cols);
+                    const gap   = 6;
+                    const tileW = Math.floor((W - gap * (cols + 1)) / cols);
+                    const tileH = Math.floor((H - gap * (rows + 1)) / rows);
+
+                    feeds.forEach((feed, i) => {
+                        const col = i % cols;
+                        const row = Math.floor(i / cols);
+                        const x   = gap + col * (tileW + gap);
+                        const y   = gap + row * (tileH + gap);
+
+                        // tile background
+                        ctx.fillStyle = '#0a0c28';
+                        ctx.beginPath();
+                        ctx.roundRect(x, y, tileW, tileH, 8);
+                        ctx.fill();
+
+                        // clip + draw video (camera or screen share — whatever the element has)
+                        ctx.save();
+                        ctx.beginPath();
+                        ctx.roundRect(x, y, tileW, tileH, 8);
+                        ctx.clip();
+                        try { ctx.drawImage(feed.el, x, y, tileW, tileH); } catch (e) {}
+                        ctx.restore();
+
+                        // name label
+                        ctx.font = 'bold 13px -apple-system, Arial, sans-serif';
+                        const tw = Math.min(ctx.measureText(feed.label).width + 20, tileW - 16);
+                        ctx.fillStyle = 'rgba(0,0,0,0.62)';
+                        ctx.beginPath();
+                        ctx.roundRect(x + 8, y + tileH - 30, tw, 22, 5);
+                        ctx.fill();
+                        ctx.fillStyle = '#fff';
+                        ctx.fillText(feed.label, x + 16, y + tileH - 13, tileW - 24);
+                    });
+                }
+
+                // REC indicator top-right
+                ctx.fillStyle = 'rgba(239,68,68,0.9)';
+                ctx.beginPath(); ctx.arc(W - 28, 20, 7, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#fff'; ctx.font = 'bold 12px Arial';
+                ctx.fillText('REC', W - 18, 25);
+
+                recordingRAFRef.current = requestAnimationFrame(drawFrame);
+            };
+            drawFrame();
+
+            // Mix ALL audio — local + all remote
             const audioCtx    = new (window.AudioContext || window.webkitAudioContext)();
             const destination = audioCtx.createMediaStreamDestination();
-            if (window.localStream) try { audioCtx.createMediaStreamSource(window.localStream).connect(destination); } catch(e) {}
-            videos.forEach(v => { if (v.stream) try { audioCtx.createMediaStreamSource(v.stream).connect(destination); } catch(e) {} });
-            const tracks = [];
-            const vt = window.localStream?.getVideoTracks()[0];
-            if (vt) tracks.push(vt);
-            tracks.push(...destination.stream.getAudioTracks());
-            const mime = MediaRecorder.isTypeSupported('video/webm;codecs=vp8,opus') ? 'video/webm;codecs=vp8,opus' : 'video/webm';
-            const recorder = new MediaRecorder(new MediaStream(tracks), { mimeType: mime });
+            if (window.localStream) {
+                try { audioCtx.createMediaStreamSource(window.localStream).connect(destination); } catch (e) {}
+            }
+            Object.values(remoteVideoElsRef.current).forEach(el => {
+                if (el && el.srcObject) {
+                    try { audioCtx.createMediaStreamSource(el.srcObject).connect(destination); } catch (e) {}
+                }
+            });
+
+            const canvasStream   = canvas.captureStream(24);
+            const combinedStream = new MediaStream([
+                ...canvasStream.getVideoTracks(),
+                ...destination.stream.getAudioTracks()
+            ]);
+
+            const mime     = MediaRecorder.isTypeSupported('video/webm;codecs=vp8,opus')
+                ? 'video/webm;codecs=vp8,opus' : 'video/webm';
+            const recorder = new MediaRecorder(combinedStream, { mimeType: mime });
             recordedChunksRef.current = [];
             recorder.ondataavailable = e => { if (e.data.size > 0) recordedChunksRef.current.push(e.data); };
             recorder.onstop = () => {
+                if (recordingRAFRef.current) { cancelAnimationFrame(recordingRAFRef.current); recordingRAFRef.current = null; }
                 const blob = new Blob(recordedChunksRef.current, { type: 'video/webm' });
                 const url  = URL.createObjectURL(blob);
                 const a    = document.createElement('a');
@@ -234,24 +349,31 @@ export default function VideoMeetComponent() {
                 a.download = `DConnect-${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}.webm`;
                 document.body.appendChild(a); a.click(); document.body.removeChild(a);
                 URL.revokeObjectURL(url);
-                try { audioCtx.close(); } catch(e) {}
+                try { audioCtx.close(); } catch (e) {}
             };
+
             mediaRecorderRef.current = recorder;
             recorder.start(1000);
             setIsRecording(true);
-            addToast('Recording started ⏺', 'join');
-        } catch(e) { addToast('Recording not supported', 'leave'); }
+            if (socketRef.current) socketRef.current.emit('chat-message', '__RECORDING_START__', username);
+            addToast('Recording whole meeting ⏺', 'join');
+        } catch (e) {
+            console.log('Recording error:', e);
+            addToast('Recording not supported in this browser', 'leave');
+        }
     };
 
     const stopRecording = () => {
+        if (recordingRAFRef.current) { cancelAnimationFrame(recordingRAFRef.current); recordingRAFRef.current = null; }
         if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive')
             mediaRecorderRef.current.stop();
         setIsRecording(false);
-        addToast('Recording saved ✓', 'hand');
+        if (socketRef.current) socketRef.current.emit('chat-message', '__RECORDING_STOP__', username);
+        addToast('Recording saved — downloading ✓', 'hand');
     };
 
-    const handleRecording = () => { if (isRecording) stopRecording(); else startRecording(); };
-    const handlePin = (sid) => { setPinnedId(prev => prev === sid ? null : sid); };
+    const handleRecording = () => { if (!isHost) return; if (isRecording) stopRecording(); else startRecording(); };
+    const handlePin        = (sid) => { setPinnedId(prev => prev === sid ? null : sid); };
 
     const playSound = (type) => {
         try {
@@ -313,22 +435,27 @@ export default function VideoMeetComponent() {
     const hostMuteAll      = ()   => {
         socketRef.current.emit('chat-message', '__HOST_MUTE_ALL__', username);
         const upd = {}; videos.forEach(v => { upd[v.socketId] = {...remoteStates[v.socketId], micMuted:true}; });
-        setRemoteStates(p => ({...p,...upd}));
-        addToast('All participants muted', 'hand');
+        setRemoteStates(p => ({...p,...upd})); addToast('All participants muted', 'hand');
     };
-    const hostLockMeeting  = ()   => {
-        const next = !meetingLocked;
-        setMeetingLocked(next); meetingLockedRef.current = next;
-        socketRef.current.emit('chat-message', `__HOST_LOCK__:${next}`, username);
-        addToast(next ? '🔒 Meeting locked' : '🔓 Meeting unlocked', next ? 'leave' : 'join');
+
+    // FIXED LOCK: uses a dedicated socket event instead of the chat-message hack.
+    // The server now validates the lock state and rejects new joiners before they enter.
+    const hostLockMeeting = () => {
+        const next      = !meetingLocked;
+        const roomPath  = window.location.href;
+        setMeetingLocked(next);
+        // Emit the dedicated lock-room event — socketManager.js handles the broadcast
+        socketRef.current.emit('lock-room', roomPath, next);
+        addToast(next ? '🔒 Meeting locked — new joiners will be removed' : '🔓 Meeting unlocked', next ? 'leave' : 'join');
     };
-    const hostTransfer     = (id) => {
+
+    const hostTransfer = (id) => {
         socketRef.current.emit('chat-message', `__HOST_TRANSFER__:${id}`, username);
         setIsHost(false); isHostRef.current = false; setHostSocketId(id);
         addToast('Host role transferred', 'hand');
     };
 
-    // LIVE CAPTIONS
+    // CAPTIONS
     const showCaptionBubble = (name, text) => {
         setActiveCaption({ name, text });
         if (captionClearTimeoutRef.current) clearTimeout(captionClearTimeoutRef.current);
@@ -348,16 +475,15 @@ export default function VideoMeetComponent() {
             recognition.continuous = true; recognition.interimResults = true; recognition.lang = 'en-US';
             recognition.onresult = (event) => {
                 if (!audioRef.current) return;
-                let interimText = '', finalText = '';
+                let interim = '', final = '';
                 for (let i = event.resultIndex; i < event.results.length; i++) {
-                    const transcript = event.results[i][0].transcript;
-                    if (event.results[i].isFinal) finalText += transcript;
-                    else interimText += transcript;
+                    const t = event.results[i][0].transcript;
+                    if (event.results[i].isFinal) final += t; else interim += t;
                 }
-                if (finalText.trim()) {
-                    showCaptionBubble(username, finalText.trim());
-                    if (socketRef.current) socketRef.current.emit('chat-message', `__CAPTION__:${finalText.trim()}`, username);
-                } else if (interimText.trim()) { showCaptionBubble(username, interimText.trim()); }
+                if (final.trim()) {
+                    showCaptionBubble(username, final.trim());
+                    if (socketRef.current) socketRef.current.emit('chat-message', `__CAPTION__:${final.trim()}`, username);
+                } else if (interim.trim()) showCaptionBubble(username, interim.trim());
             };
             recognition.onerror = (e) => {
                 if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
@@ -458,32 +584,59 @@ export default function VideoMeetComponent() {
         socketRef.current = io.connect(server_url, { secure: false });
         socketRef.current.on('signal', gotMessageFromServer);
         socketRef.current.on('disconnect', () => setIsConnected(false));
+
+        // FIXED LOCK: server tells this client they were rejected before entering the room
+        socketRef.current.on('room-locked', () => {
+            addToast('This meeting is locked by the host 🔒', 'leave');
+            playSound('alert');
+            setTimeout(() => { window.location.href = "/"; }, 2000);
+        });
+
+        // FIXED LOCK: server broadcasts lock state changes to everyone in the room
+        socketRef.current.on('room-lock-status', (locked) => {
+            setMeetingLocked(locked);
+            // Non-host participants get a toast; host already showed one in hostLockMeeting
+            if (!isHostRef.current) {
+                addToast(locked ? '🔒 Meeting locked by host' : '🔓 Meeting unlocked', locked ? 'leave' : 'join');
+            }
+        });
+
         socketRef.current.on('connect', () => {
             setIsConnected(true);
             socketRef.current.emit('join-call', window.location.href);
             socketIdRef.current = socketRef.current.id;
             socketRef.current.on('chat-message', addMessage);
+
             socketRef.current.on('user-left', (id) => {
                 playSound('leave'); addToast('A participant left', 'leave');
                 setPinnedId(p => p === id ? null : p);
                 setParticipantNames(p => { const n={...p}; delete n[id]; return n; });
                 setRemoteStates(p    => { const n={...p}; delete n[id]; return n; });
+                delete remoteVideoElsRef.current[id];
                 setVideos(vs => vs.filter(v => v.socketId !== id));
             });
+
             socketRef.current.on('user-joined', (id, clients) => {
                 if (id === socketIdRef.current && clients.length === 1) {
                     setIsHost(true); isHostRef.current = true; setHostSocketId(socketIdRef.current);
                     setTimeout(() => socketRef.current.emit('chat-message', `__HOST_CLAIM__:${socketIdRef.current}`, username), 400);
                 }
                 if (id !== socketIdRef.current) {
-                    if (isHostRef.current && meetingLockedRef.current)
-                        setTimeout(() => socketRef.current.emit('chat-message', `__HOST_KICK__:${id}`, username), 600);
                     playSound('join'); addToast('A participant joined', 'join');
                     setTimeout(() => {
-                        socketRef.current.emit('chat-message', `__USERNAME__:${username}`, username);
-                        if (isHostRef.current) socketRef.current.emit('chat-message', `__HOST_CLAIM__:${socketIdRef.current}`, username);
+                        if (socketRef.current) {
+                            socketRef.current.emit('chat-message', `__USERNAME__:${username}`, username);
+                            if (isHostRef.current) {
+                                socketRef.current.emit('chat-message', `__HOST_CLAIM__:${socketIdRef.current}`, username);
+                            }
+                        }
+                    }, 400);
+                } else {
+                    setTimeout(() => {
+                        if (socketRef.current) socketRef.current.emit('chat-message', `__USERNAME__:${username}`, username);
                     }, 300);
                 }
+
                 clients.forEach(sid => {
                     connections[sid] = new RTCPeerConnection(peerConfigConnections);
                     connections[sid].onicecandidate = ev => { if (ev.candidate) socketRef.current.emit('signal', sid, JSON.stringify({ ice: ev.candidate })); };
@@ -495,6 +648,7 @@ export default function VideoMeetComponent() {
                     if (window.localStream) connections[sid].addStream(window.localStream);
                     else { const bs=(...a)=>new MediaStream([black(...a),silence()]); window.localStream=bs(); connections[sid].addStream(window.localStream); }
                 });
+
                 if (id === socketIdRef.current) {
                     for (let id2 in connections) {
                         if (id2 === socketIdRef.current) continue;
@@ -526,6 +680,7 @@ export default function VideoMeetComponent() {
     const handleEndCall = () => {
         if (timerRef.current) clearInterval(timerRef.current);
         if (isRecording) stopRecording();
+        if (recordingRAFRef.current) { cancelAnimationFrame(recordingRAFRef.current); recordingRAFRef.current = null; }
         if (captionsOnRef.current && recognitionRef.current) {
             try { recognitionRef.current.onend = null; recognitionRef.current.stop(); } catch (e) {}
         }
@@ -549,41 +704,42 @@ export default function VideoMeetComponent() {
         if (data === '__HOST_MUTE_ALL__')            { if(socketIdSender!==socketIdRef.current){setAudio(false);if(window.localStream)window.localStream.getAudioTracks().forEach(t=>{t.enabled=false;});addToast('Host muted all microphones 🔇','leave');playSound('alert');} return; }
         if (data.startsWith('__HOST_UNMUTE_REQ__:')) { const tid=data.replace('__HOST_UNMUTE_REQ__:',''); if(tid===socketIdRef.current){addToast('Host is asking you to unmute 🎙️','hand');playSound('alert');} return; }
         if (data.startsWith('__HOST_MUTE_CAM__:'))   { const tid=data.replace('__HOST_MUTE_CAM__:',''); if(tid===socketIdRef.current){setVideo(false);if(window.localStream)window.localStream.getVideoTracks().forEach(t=>{t.enabled=false;});addToast('Host turned off your camera 📷','leave');playSound('alert');} return; }
-        if (data.startsWith('__HOST_KICK__:'))        { const tid=data.replace('__HOST_KICK__:',''); if(tid===socketIdRef.current){addToast('You have been removed from the meeting','leave');playSound('leave');setTimeout(()=>handleEndCall(),1800);} return; }
-        if (data.startsWith('__HOST_LOCK__:'))        { const locked=data.replace('__HOST_LOCK__:','')==='true'; setMeetingLocked(locked); meetingLockedRef.current=locked; if(socketIdSender!==socketIdRef.current)addToast(locked?'🔒 Meeting locked by host':'🔓 Meeting unlocked',locked?'leave':'join'); return; }
+        if (data.startsWith('__HOST_KICK__:'))        { const tid=data.replace('__HOST_KICK__:',''); if(tid===socketIdRef.current){addToast('You have been removed from the meeting','leave');playSound('leave');setTimeout(()=>handleEndCall(),800);} return; }
+        // NOTE: __HOST_LOCK__ is no longer sent via chat-message.
+        // Lock/unlock is now handled server-side via the dedicated lock-room socket event.
         if (data.startsWith('__HAND__:'))            { if(socketIdSender!==socketIdRef.current){const r=data.split(':')[1]==='true'; setRaisedHands(p=>({...p,[socketIdSender]:r})); if(r)addToast(`${sender} raised their hand ✋`,'hand');} return; }
         if (data.startsWith('__REACTION__:'))         { if(socketIdSender!==socketIdRef.current)triggerReaction(data.split(':')[1]); return; }
-        if (data.startsWith('__CAPTION__:'))          { if(socketIdSender!==socketIdRef.current) showCaptionBubble(sender, data.replace('__CAPTION__:','')); return; }
+        if (data.startsWith('__CAPTION__:'))          { if(socketIdSender!==socketIdRef.current)showCaptionBubble(sender,data.replace('__CAPTION__:','')); return; }
+        if (data === '__RECORDING_START__')           { if(socketIdSender!==socketIdRef.current){setIsRemoteRecording(true);addToast(`${sender} is recording this meeting ⏺`,'hand');} return; }
+        if (data === '__RECORDING_STOP__')            { setIsRemoteRecording(false); return; }
 
         setParticipantNames(p=>({...p,[socketIdSender]:sender}));
         setMessages(prev=>[...prev,{sender,data,timestamp:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}]);
         if (socketIdSender!==socketIdRef.current) setNewMessages(p=>p+1);
     };
 
-    const sendMessage = () => { socketRef.current.emit('chat-message', message, username); setMessage(""); };
-    const connect     = () => { setAskForUsername(false); getMedia(); timerRef.current=setInterval(()=>setCallDuration(p=>p+1),1000); };
-    const formatTime  = (s) => { const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sec=s%60; return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`; };
-    const getRoomName = () => { const p=window.location.pathname.split('/'); return p[p.length-1]||'Meeting'; };
+    const sendMessage  = () => { socketRef.current.emit('chat-message', message, username); setMessage(""); };
+    const connect      = () => { setAskForUsername(false); getMedia(); timerRef.current=setInterval(()=>setCallDuration(p=>p+1),1000); };
+    const formatTime   = (s) => { const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sec=s%60; return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`; };
+    const getRoomName  = () => { const p=window.location.pathname.split('/'); return p[p.length-1]||'Meeting'; };
     const handleInvite = () => { navigator.clipboard.writeText(getRoomName()); setInviteCopied(true); setTimeout(()=>setInviteCopied(false),2500); };
 
     const openSidePanel  = (panel) => { if(panel==='chat'){setShowChat(true);setShowParticipants(false);setNewMessages(0);}else{setShowParticipants(true);setShowChat(false);} };
     const closeSidePanel = () => { setShowChat(false); setShowParticipants(false); };
     const isSidePanelOpen = showChat || showParticipants;
-
-    const getName = (sid) => participantNames[sid] || 'Participant';
+    const getName          = (sid) => participantNames[sid] || 'Participant';
 
     const pinnedVideo = videos.find(v => v.socketId === pinnedId);
     const otherVideos = videos.filter(v => v.socketId !== pinnedId);
 
-    // FIXED: dynamic grid columns so videos fill the screen properly
-    const getGridColumns = (count) => {
-        if (count === 1) return '1fr';
-        if (count <= 4) return 'repeat(2, 1fr)';
-        if (count <= 9) return 'repeat(3, 1fr)';
-        return 'repeat(4, 1fr)';
+    const getGridStyle = (count) => {
+        if (count === 0) return {};
+        const cols = count === 1 ? 1 : count <= 4 ? 2 : count <= 9 ? 3 : 4;
+        const rows = Math.ceil(count / cols);
+        return { gridTemplateColumns: `repeat(${cols}, 1fr)`, gridTemplateRows: `repeat(${rows}, 1fr)` };
     };
 
-    const darkFieldSx = { flex:1,'& .MuiOutlinedInput-root':{color:'#fff',borderRadius:'12px','& fieldset':{borderColor:'rgba(255,255,255,0.15)'},'&:hover fieldset':{borderColor:'rgba(255,255,255,0.3)'},'&.Mui-focused fieldset':{borderColor:'#3b82f6'}},'& .MuiInputLabel-root':{color:'rgba(255,255,255,0.4)'},'& .MuiInputLabel-root.Mui-focused':{color:'#3b82f6'} };
+    const darkFieldSx  = { flex:1,'& .MuiOutlinedInput-root':{color:'#fff',borderRadius:'12px','& fieldset':{borderColor:'rgba(255,255,255,0.15)'},'&:hover fieldset':{borderColor:'rgba(255,255,255,0.3)'},'&.Mui-focused fieldset':{borderColor:'#3b82f6'}},'& .MuiInputLabel-root':{color:'rgba(255,255,255,0.4)'},'& .MuiInputLabel-root.Mui-focused':{color:'#3b82f6'} };
     const lobbyFieldSx = { width:'100%','& .MuiOutlinedInput-root':{color:'#fff',borderRadius:'10px','& fieldset':{borderColor:'rgba(255,255,255,0.2)'},'&:hover fieldset':{borderColor:'rgba(255,255,255,0.4)'},'&.Mui-focused fieldset':{borderColor:'#3b82f6'}},'& .MuiInputLabel-root':{color:'rgba(255,255,255,0.5)'},'& .MuiInputLabel-root.Mui-focused':{color:'#3b82f6'} };
 
     return (
@@ -628,6 +784,7 @@ export default function VideoMeetComponent() {
                         <span className={styles.navStatus}><span className={isConnected?styles.dotConnected:styles.dotConnecting}></span>{isConnected?'Connected':'Connecting...'}</span>
                         <span className={styles.navDivider}>|</span>
                         <span className={styles.navTimer}>{formatTime(callDuration)}</span>
+                        {(isRecording||isRemoteRecording)&&<span className={styles.recNavBadge}>⏺ REC</span>}
                     </div>
                     <div className={styles.navRight}>
                         <span className={styles.navParticipants}>👥 {videos.length+1}</span>
@@ -649,11 +806,7 @@ export default function VideoMeetComponent() {
                 </div>
 
                 {/* CAPTION BUBBLE */}
-                {activeCaption&&(
-                    <div className={styles.captionBubble}>
-                        <span className={styles.captionName}>{activeCaption.name}:</span> {activeCaption.text}
-                    </div>
-                )}
+                {activeCaption&&(<div className={styles.captionBubble}><span className={styles.captionName}>{activeCaption.name}:</span> {activeCaption.text}</div>)}
 
                 {/* SIDE PANEL */}
                 {isSidePanelOpen&&(
@@ -692,11 +845,11 @@ export default function VideoMeetComponent() {
                                             </div>
                                             {isHost&&(
                                                 <div className={styles.hostParticipantActions}>
-                                                    <button className={styles.hostActionBtn} onClick={()=>hostMuteMic(v.socketId)} title="Mute mic">🔇</button>
-                                                    <button className={styles.hostActionBtn} onClick={()=>hostUnmuteMicReq(v.socketId)} title="Ask unmute">🎙️</button>
-                                                    <button className={styles.hostActionBtn} onClick={()=>hostMuteCamera(v.socketId)} title="Turn off cam">📷</button>
-                                                    <button className={styles.hostActionBtn} onClick={()=>hostTransfer(v.socketId)} title="Make host">👑</button>
-                                                    <button className={`${styles.hostActionBtn} ${styles.hostKickBtn}`} onClick={()=>setConfirmKick(v.socketId)} title="Remove">✕</button>
+                                                    <button className={styles.hostActionBtn} onClick={()=>hostMuteMic(v.socketId)}>🔇</button>
+                                                    <button className={styles.hostActionBtn} onClick={()=>hostUnmuteMicReq(v.socketId)}>🎙️</button>
+                                                    <button className={styles.hostActionBtn} onClick={()=>hostMuteCamera(v.socketId)}>📷</button>
+                                                    <button className={styles.hostActionBtn} onClick={()=>hostTransfer(v.socketId)}>👑</button>
+                                                    <button className={`${styles.hostActionBtn} ${styles.hostKickBtn}`} onClick={()=>setConfirmKick(v.socketId)}>✕</button>
                                                 </div>
                                             )}
                                         </div>
@@ -736,10 +889,7 @@ export default function VideoMeetComponent() {
                 {showShortcutsHelp&&(
                     <div className={styles.shortcutsOverlay} onClick={()=>setShowShortcutsHelp(false)}>
                         <div className={styles.shortcutsPanel} onClick={e=>e.stopPropagation()}>
-                            <div className={styles.shortcutsPanelHeader}>
-                                <span>Keyboard Shortcuts</span>
-                                <button className={styles.chatCloseBtn} onClick={()=>setShowShortcutsHelp(false)}>✕</button>
-                            </div>
+                            <div className={styles.shortcutsPanelHeader}><span>Keyboard Shortcuts</span><button className={styles.chatCloseBtn} onClick={()=>setShowShortcutsHelp(false)}>✕</button></div>
                             <div className={styles.shortcutRow}><kbd className={styles.kbd}>M</kbd><span>Toggle microphone</span></div>
                             <div className={styles.shortcutRow}><kbd className={styles.kbd}>V</kbd><span>Toggle camera</span></div>
                             <div className={styles.shortcutRow}><kbd className={styles.kbd}>C</kbd><span>Toggle chat panel</span></div>
@@ -760,22 +910,21 @@ export default function VideoMeetComponent() {
                             {showReactions&&(<div className={styles.reactionPicker}>{REACTIONS.map(e=><button key={e} className={styles.reactionBtn} onClick={()=>sendReaction(e)}>{e}</button>)}</div>)}
                             <IconButton onClick={()=>setShowReactions(!showReactions)} className={`${styles.controlBtn} ${showReactions?styles.controlBtnActive:''}`} title="Reactions"><span style={{fontSize:'1.25rem',lineHeight:1}}>😊</span></IconButton>
                         </div>
-
-                        {/* MORE MENU — Record / Captions / Shortcuts only */}
                         <div className={styles.moreMenuArea}>
                             {showMoreMenu&&(
                                 <div className={styles.moreMenu}>
-                                    <button className={styles.moreMenuItem} onClick={()=>{handleRecording();setShowMoreMenu(false);}}>
-                                        {isRecording?<span className={styles.recordDot}></span>:<span style={{fontSize:'1.1rem'}}>⏺</span>}
-                                        <span>{isRecording?'Stop Recording':'Start Recording'}</span>
-                                    </button>
+                                    {isHost&&(
+                                        <button className={styles.moreMenuItem} onClick={()=>{handleRecording();setShowMoreMenu(false);}}>
+                                            {isRecording?<span className={styles.recordDot}></span>:<span style={{fontSize:'1.1rem'}}>⏺</span>}
+                                            <span>{isRecording?'Stop Recording':'Record Meeting'}</span>
+                                        </button>
+                                    )}
                                     <button className={styles.moreMenuItem} onClick={()=>{toggleCaptions();setShowMoreMenu(false);}}>
                                         {captionsOn?<ClosedCaptionIcon/>:<ClosedCaptionOffIcon/>}
                                         <span>{captionsOn?'Captions: On':'Turn On Captions'}</span>
                                     </button>
                                     <button className={styles.moreMenuItem} onClick={()=>{setShowShortcutsHelp(true);setShowMoreMenu(false);}}>
-                                        <KeyboardIcon/>
-                                        <span>Keyboard Shortcuts</span>
+                                        <KeyboardIcon/><span>Keyboard Shortcuts</span>
                                     </button>
                                 </div>
                             )}
@@ -784,7 +933,6 @@ export default function VideoMeetComponent() {
                                 {(isRecording||captionsOn)&&<span className={styles.moreActiveDot}></span>}
                             </IconButton>
                         </div>
-
                         <IconButton onClick={()=>isSidePanelOpen&&showParticipants?closeSidePanel():openSidePanel('participants')} className={`${styles.controlBtn} ${showParticipants?styles.controlBtnActive:''}`} title="Participants"><PeopleAltIcon/></IconButton>
                         <Badge badgeContent={!showChat?newMessages:0} max={99} color='error'>
                             <IconButton onClick={()=>isSidePanelOpen&&showChat?closeSidePanel():openSidePanel('chat')} className={`${styles.controlBtn} ${showChat?styles.controlBtnActive:''}`} title="Chat"><ChatIcon/></IconButton>
@@ -795,7 +943,7 @@ export default function VideoMeetComponent() {
                 {/* LOCAL VIDEO */}
                 <div className={styles.localVideoWrapper}>
                     <video className={`${styles.meetUserVideo} ${speaking['local']?styles.speakingVideo:''}`} ref={localVideoref} autoPlay muted></video>
-                    <span className={styles.youLabel}>You{isHost?' 👑':''}</span>
+                    <span className={styles.youLabel}>{screen ? '🖥️ You' : `You${isHost?' 👑':''}`}</span>
                     {handRaised&&<span className={styles.handBadgeLocal}>✋</span>}
                     {isRecording&&<span className={styles.recordingBadge}>⏺ REC</span>}
                 </div>
@@ -803,11 +951,11 @@ export default function VideoMeetComponent() {
                 {/* EMPTY STATE */}
                 {videos.length===0&&(<div className={styles.emptyState}><div className={styles.emptyPulse}></div><p className={styles.emptyTitle}>Waiting for others to join...</p><p className={styles.emptySub}>Share code <strong>{getRoomName()}</strong> to invite</p></div>)}
 
-                {/* PARTICIPANT TILES — SPOTLIGHT */}
+                {/* SPOTLIGHT */}
                 {pinnedVideo?(
                     <div className={styles.conferenceViewSpotlight}>
-                        <div className={`${styles.pinnedTile} ${speaking[pinnedVideo.socketId]?styles.speakingTile:''}`} onClick={()=>handlePin(pinnedVideo.socketId)} title="Click to unpin">
-                            <video data-socket={pinnedVideo.socketId} ref={ref=>{if(ref&&pinnedVideo.stream)ref.srcObject=pinnedVideo.stream;}} autoPlay></video>
+                        <div className={`${styles.pinnedTile} ${speaking[pinnedVideo.socketId]?styles.speakingTile:''}`} onClick={()=>handlePin(pinnedVideo.socketId)}>
+                            <video data-socket={pinnedVideo.socketId} ref={ref=>{if(ref){remoteVideoElsRef.current[pinnedVideo.socketId]=ref;if(pinnedVideo.stream&&ref.srcObject!==pinnedVideo.stream)ref.srcObject=pinnedVideo.stream;}}} autoPlay></video>
                             {raisedHands[pinnedVideo.socketId]&&<span className={styles.handBadge}>✋</span>}
                             <span className={styles.pinnedLabel}>📌 {getName(pinnedVideo.socketId)} — click to unpin</span>
                         </div>
@@ -815,7 +963,7 @@ export default function VideoMeetComponent() {
                             <div className={styles.thumbnailStrip}>
                                 {otherVideos.map(v=>(
                                     <div key={v.socketId} className={`${styles.thumbnailTile} ${speaking[v.socketId]?styles.thumbnailSpeaking:''}`} onClick={()=>handlePin(v.socketId)}>
-                                        <video data-socket={v.socketId} ref={ref=>{if(ref&&v.stream)ref.srcObject=v.stream;}} autoPlay></video>
+                                        <video data-socket={v.socketId} ref={ref=>{if(ref){remoteVideoElsRef.current[v.socketId]=ref;if(v.stream&&ref.srcObject!==v.stream)ref.srcObject=v.stream;}}} autoPlay></video>
                                         {raisedHands[v.socketId]&&<span className={styles.handBadgeSm}>✋</span>}
                                     </div>
                                 ))}
@@ -823,23 +971,25 @@ export default function VideoMeetComponent() {
                         )}
                     </div>
                 ):(
-                    /* FIXED: proper full-screen grid that adapts per participant count */
-                    <div
-                        className={styles.conferenceView}
-                        style={{ gridTemplateColumns: getGridColumns(videos.length) }}
-                    >
+                    <div className={styles.conferenceView} style={getGridStyle(videos.length)}>
                         {videos.map(v=>(
                             <div key={v.socketId} className={`${styles.participantTile} ${speaking[v.socketId]?styles.speakingTile:''}`}>
-                                <video data-socket={v.socketId} ref={ref=>{if(ref&&v.stream)ref.srcObject=v.stream;}} autoPlay></video>
+                                <video data-socket={v.socketId}
+                                    ref={ref=>{
+                                        if(ref){
+                                            remoteVideoElsRef.current[v.socketId]=ref;
+                                            if(v.stream&&ref.srcObject!==v.stream) ref.srcObject=v.stream;
+                                        }
+                                    }} autoPlay></video>
                                 {raisedHands[v.socketId]&&<span className={styles.handBadge}>✋</span>}
                                 {v.socketId===hostSocketId&&<span className={styles.tileHostBadge}>👑</span>}
                                 <span className={styles.tileName}>{getName(v.socketId)}</span>
                                 <span className={styles.pinHint} onClick={()=>handlePin(v.socketId)}>📌</span>
                                 {isHost&&(
                                     <div className={styles.hostTileOverlay}>
-                                        <button className={styles.hostTileBtn} onClick={()=>hostMuteMic(v.socketId)} title="Mute">🔇</button>
-                                        <button className={styles.hostTileBtn} onClick={()=>hostMuteCamera(v.socketId)} title="Cam off">📷</button>
-                                        <button className={`${styles.hostTileBtn} ${styles.hostTileKick}`} onClick={()=>setConfirmKick(v.socketId)} title="Remove">✕</button>
+                                        <button className={styles.hostTileBtn} onClick={()=>hostMuteMic(v.socketId)}>🔇</button>
+                                        <button className={styles.hostTileBtn} onClick={()=>hostMuteCamera(v.socketId)}>📷</button>
+                                        <button className={`${styles.hostTileBtn} ${styles.hostTileKick}`} onClick={()=>setConfirmKick(v.socketId)}>✕</button>
                                     </div>
                                 )}
                                 {confirmKick===v.socketId&&(
@@ -855,9 +1005,7 @@ export default function VideoMeetComponent() {
                 )}
 
                 {/* FLOATING REACTIONS */}
-                {activeReactions.map(r=>(
-                    <div key={r.id} className={styles.floatingReaction} style={{left:`${r.x}%`}}>{r.emoji}</div>
-                ))}
+                {activeReactions.map(r=>(<div key={r.id} className={styles.floatingReaction} style={{left:`${r.x}%`}}>{r.emoji}</div>))}
 
             </div>
         )}

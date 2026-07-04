@@ -6,13 +6,8 @@ export default function LandingPage() {
   const router = useNavigate();
 
   const joinAsGuest = () => {
-    const guestCode = Math.random()
-      .toString(36)
-      .substring(2, 8)
-      .toUpperCase();
-
-    router(`/${guestCode}`);
-  };
+    router("/guest");
+};
 
   return (
     <div className="landingPageContainer">
