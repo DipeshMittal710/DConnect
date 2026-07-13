@@ -48,10 +48,12 @@ export default function Authentication() {
     const [message,   setMessage]   = React.useState();
     const [formState, setFormState] = React.useState(0);
     const [open,      setOpen]      = React.useState(false);
+    const [isLoading, setIsLoading] = React.useState(false);
 
     const { handleRegister, handleLogin } = React.useContext(AuthContext);
 
     let handleAuth = async () => {
+        setIsLoading(true);
         try {
             if (formState === 0) {
                 let result = await handleLogin(username, password);
@@ -64,7 +66,11 @@ export default function Authentication() {
             }
         } catch (err) {
             console.log(err);
-            setError(err.response.data.message);
+            const msg = err?.response?.data?.message
+                || (err.code === 'ECONNABORTED' ? "Server is waking up — please try again in 30 seconds." : "Server unreachable. Please try again.");
+            setError(msg);
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -223,8 +229,12 @@ export default function Authentication() {
                                     boxShadow: '0 4px 18px rgba(59,130,246,0.35)',
                                 }}
                                 onClick={handleAuth}
+                                disabled={isLoading}
                             >
-                                {formState === 0 ? 'Sign In' : 'Create Account'}
+                                {isLoading
+                                    ? (formState === 0 ? 'Signing in...' : 'Creating account...')
+                                    : (formState === 0 ? 'Sign In' : 'Create Account')
+                                }
                             </Button>
                         </Box>
                     </Box>

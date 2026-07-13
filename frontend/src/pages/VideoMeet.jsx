@@ -548,7 +548,14 @@ export default function VideoMeetComponent() {
 
     const getDislayMedia = () => {
         if (screen && navigator.mediaDevices.getDisplayMedia)
-            navigator.mediaDevices.getDisplayMedia({ video: true, audio: true }).then(getDislayMediaSuccess).catch(e => console.log(e));
+            navigator.mediaDevices.getDisplayMedia({ video: true, audio: true })
+            .then(getDislayMediaSuccess)
+            .catch(e => {
+                // FIXED: if user cancels the browser share dialog (or permission denied),
+                // reset screen state so the button doesn't stay stuck as "Stop Sharing"
+                console.log('Screen share cancelled or error:', e);
+                setScreen(false);
+            });
     };
 
     const getDislayMediaSuccess = (stream) => {
@@ -673,7 +680,22 @@ export default function VideoMeetComponent() {
 
     const handleVideo  = () => setVideo(!video);
     const handleAudio  = () => setAudio(!audio);
-    const handleScreen = () => setScreen(!screen);
+
+    // FIXED: explicitly stop screen-share tracks when the user clicks the app's
+    // stop button. Calling t.stop() triggers the onended event which was already
+    // set up in getDislayMediaSuccess — that handler restores the camera cleanly.
+    // Previously clicking the button only changed state; the stream kept running
+    // and the camera feed never came back.
+    const handleScreen = () => {
+        if (screen) {
+            try {
+                if (window.localStream) {
+                    window.localStream.getVideoTracks().forEach(t => t.stop());
+                }
+            } catch(e) {}
+        }
+        setScreen(!screen);
+    };
 
     useEffect(() => { if (screen !== undefined) getDislayMedia(); }, [screen]);
 

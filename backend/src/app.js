@@ -17,10 +17,24 @@ if (!process.env.MONGO_URI) {
 
 app.set("port", process.env.PORT || 8000);
 
-// FIXED: restrict CORS to the frontend origin (not wildcard)
+// FIXED CORS: allow both the deployed frontend AND localhost for development.
+// Previously only FRONTEND_URL was allowed, so any request from localhost:3000
+// was blocked by CORS before reaching any route handler.
+const allowedOrigins = [
+    process.env.FRONTEND_URL,          // e.g. https://dconnectfrontend.onrender.com
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "http://localhost:3003",
+].filter(Boolean); // remove undefined if FRONTEND_URL is not set
+
 app.use(cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:3000",
-    methods: ["GET", "POST", "PUT", "DELETE"],
+    origin: function (origin, callback) {
+        // Allow requests with no origin (mobile apps, Postman, curl, server-to-server)
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.includes(origin)) return callback(null, true);
+        return callback(new Error(`CORS: origin ${origin} not allowed`));
+    },
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     credentials: true
 }));
 
@@ -30,10 +44,8 @@ app.use(express.urlencoded({ limit: "40kb", extended: true }));
 app.use("/api/v1/users", userRoutes);
 
 const start = async () => {
-    // FIXED: removed the useless app.set("mongo_user") line
     const connectionDb = await mongoose.connect(process.env.MONGO_URI);
     console.log(`MONGO Connected — DB Host: ${connectionDb.connection.host}`);
-
     server.listen(app.get("port"), () => {
         console.log(`Listening on port ${app.get("port")}`);
     });

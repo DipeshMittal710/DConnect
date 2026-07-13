@@ -5,10 +5,6 @@ import { Link, useNavigate } from "react-router-dom";
 export default function LandingPage() {
   const router = useNavigate();
 
-  const joinAsGuest = () => {
-    router("/guest");
-};
-
   return (
     <div className="landingPageContainer">
       <nav>
@@ -17,7 +13,9 @@ export default function LandingPage() {
         </div>
 
         <div className="navlist">
-          <p onClick={joinAsGuest}>Join as Guest</p>
+          {/* UPDATED: navigate to /guest instead of a random room code directly.
+              The GuestPage lets them choose create or join and enter their name. */}
+          <p onClick={() => router("/guest")}>Join as Guest</p>
           <p onClick={() => router("/auth")}>Register</p>
           <div onClick={() => router("/auth")} role="button">
             <p>Login</p>

@@ -1,40 +1,30 @@
 import './App.css';
-import { Route, BrowserRouter as Router, Routes } from 'react-router-dom';
+import { Route, BrowserRouter as Router, Routes, Navigate } from 'react-router-dom';
 import LandingPage from './pages/landing';
 import Authentication from './pages/authentication';
 import { AuthProvider } from './contexts/AuthContext';
 import VideoMeetComponent from './pages/VideoMeet';
 import HomeComponent from './pages/home';
 import History from './pages/history';
-import GuestJoin from "./pages/GuestJoin";
+import GuestPage from './pages/GuestPage.jsx'; // NEW
 
 function App() {
   return (
     <div className="App">
-
       <Router>
-
         <AuthProvider>
-
           <Routes>
-
-            <Route path='/' element={<LandingPage />} />
-
-            <Route path='/auth' element={<Authentication />} />
-
-            {/* FIXED: was path='/home's (syntax error — the 's was a typo) */}
-            <Route path='/home' element={<HomeComponent />} />
-
+            <Route path='/'        element={<LandingPage />} />
+            <Route path='/auth'    element={<Authentication />} />
+            <Route path='/guest'   element={<GuestPage />} />  {/* NEW */}
+            <Route path='/home'    element={<HomeComponent />} />
             <Route path='/history' element={<History />} />
-            <Route path="/guest" element={<GuestJoin />} />
-            <Route path='/:url' element={<VideoMeetComponent />} />
-
+            <Route path='/:url'    element={<VideoMeetComponent />} />
+            {/* 404 fallback */}
+            <Route path='*'        element={<Navigate to='/' replace />} />
           </Routes>
-
         </AuthProvider>
-
       </Router>
-
     </div>
   );
 }

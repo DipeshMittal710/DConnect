@@ -8,7 +8,10 @@ import server from "../environment";
 export const AuthContext = createContext({});
 
 const client = axios.create({
-    baseURL: `${server}/api/v1/users`
+    baseURL: `${server}/api/v1/users`,
+    // Render free tier can take 30-50s to wake from sleep.
+    // 60s timeout gives it enough time to respond on cold start.
+    timeout: 60000
 })
 
 
