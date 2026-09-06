@@ -1,127 +1,174 @@
 import React, { useContext, useEffect, useState } from "react";
 import { AuthContext } from "../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { Box, Card, CardContent, Typography, IconButton, Chip } from "@mui/material";
-import HomeIcon from "@mui/icons-material/Home";
-import HistoryIcon from "@mui/icons-material/History";
-import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
-import VideoCallIcon from "@mui/icons-material/VideoCall";
+import {
+    Box, Typography, Card, CardContent, Chip,
+    IconButton, Tooltip, CircularProgress
+} from "@mui/material";
+import VideocamIcon    from "@mui/icons-material/Videocam";
+import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
+import ContentCopyIcon from "@mui/icons-material/ContentCopy";
+import ReplayIcon      from "@mui/icons-material/Replay";
+import ArrowBackIcon   from "@mui/icons-material/ArrowBack";
 
 export default function History() {
-  const { getHistoryOfUser } = useContext(AuthContext);
-  const [meetings, setMeetings] = useState([]);
-  const routeTo = useNavigate();
+    const { getHistoryOfUser } = useContext(AuthContext);
+    const [meetings,   setMeetings]   = useState([]);
+    const [loading,    setLoading]    = useState(true);
+    const [copiedId,   setCopiedId]   = useState(null);
+    const navigate = useNavigate();
 
-  useEffect(() => {
-    const fetchHistory = async () => {
-      try {
-        const history = await getHistoryOfUser();
-        setMeetings(history);
-      } catch {}
+    useEffect(() => {
+        const fetchHistory = async () => {
+            try {
+                const data = await getHistoryOfUser();
+                setMeetings(data || []);
+            } catch (e) {
+                console.log("Error fetching history:", e);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchHistory();
+    }, []);
+
+    const formatDate = (dateStr) => {
+        const d = new Date(dateStr);
+        return d.toLocaleDateString([], { year: "numeric", month: "short", day: "numeric" }) +
+            " · " + d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
     };
-    fetchHistory();
-  }, []);
 
-  const formatDate = (dateString) => {
-    const date  = new Date(dateString);
-    const day   = date.getDate().toString().padStart(2, "0");
-    const month = (date.getMonth() + 1).toString().padStart(2, "0");
-    const year  = date.getFullYear();
-    return `${day}/${month}/${year}`;
-  };
+    const handleCopy = (code) => {
+        navigator.clipboard.writeText(code);
+        setCopiedId(code);
+        setTimeout(() => setCopiedId(null), 2000);
+    };
 
-  return (
-    <Box sx={{
-      minHeight: "100vh",
-      background: "linear-gradient(135deg,#0f172a,#111827,#1e293b)",
-      p: { xs: 2, sm: 3, md: 4 },
-    }}>
+    // NEW: rejoin meeting directly from history
+    const handleRejoin = (code) => {
+        navigate(`/${code}`);
+    };
 
-      {/* Header */}
-      <Box sx={{
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        flexWrap: "wrap",
-        gap: 2,
-        mb: { xs: 3, sm: 5 },
-      }}>
-        <Box display="flex" alignItems="center" gap={2}>
-          <HistoryIcon sx={{ color: "#60a5fa", fontSize: { xs: 28, sm: 40 } }} />
-          <Typography variant="h4" sx={{
-            color: "white", fontWeight: "bold",
-            fontSize: { xs: "1.25rem", sm: "1.75rem", md: "2.125rem" },
-          }}>
-            Meeting History
-          </Typography>
-        </Box>
+    const cardSx = {
+        background: "rgba(255,255,255,0.04)",
+        border: "1px solid rgba(255,255,255,0.09)",
+        borderRadius: "16px",
+        mb: 2,
+        transition: "all 0.18s",
+        "&:hover": {
+            background: "rgba(255,255,255,0.07)",
+            borderColor: "rgba(255,255,255,0.16)",
+            transform: "translateY(-2px)",
+            boxShadow: "0 8px 24px rgba(0,0,0,0.3)"
+        }
+    };
 
-        <IconButton
-          onClick={() => routeTo("/home")}
-          sx={{
-            bgcolor: "#2563eb", color: "white",
-            width: { xs: 40, sm: 48 }, height: { xs: 40, sm: 48 },
-            "&:hover": { bgcolor: "#1d4ed8" },
-          }}
-        >
-          <HomeIcon />
-        </IconButton>
-      </Box>
-
-      {meetings.length === 0 ? (
-        <Typography sx={{
-          color: "white", textAlign: "center", mt: 10,
-          fontSize: { xs: 16, sm: 20, md: 22 },
-        }}>
-          No Meeting History Found
-        </Typography>
-      ) : (
+    return (
         <Box sx={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(min(300px, 100%), 1fr))",
-          gap: { xs: 2, sm: 3 },
+            minHeight: "100vh",
+            background: "rgb(1,4,48)",
+            fontFamily: "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif",
+            padding: { xs: "20px 16px", md: "40px 32px" },
         }}>
-          {meetings.map((meeting, index) => (
-            <Card key={index} sx={{
-              borderRadius: 4,
-              background: "#1e293b",
-              color: "white",
-              transition: "0.3s",
-              boxShadow: "0 10px 25px rgba(0,0,0,.35)",
-              "&:hover": {
-                transform: { xs: "none", sm: "translateY(-8px)" },
-                boxShadow: "0 18px 35px rgba(0,0,0,.5)",
-              },
-            }}>
-              <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
-                <Chip icon={<VideoCallIcon />} label="Meeting" color="primary" sx={{ mb: 3 }} />
+            {/* Header */}
+            <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 4 }}>
+                <IconButton onClick={() => navigate("/home")}
+                    sx={{ color: "rgba(255,255,255,0.5)", "&:hover": { color: "#fff", background: "rgba(255,255,255,0.08)" } }}>
+                    <ArrowBackIcon />
+                </IconButton>
+                <Box>
+                    <Typography sx={{ color: "#fff", fontSize: { xs: "1.4rem", md: "1.8rem" }, fontWeight: 700, letterSpacing: "-0.3px" }}>
+                        Meeting History
+                    </Typography>
+                    <Typography sx={{ color: "rgba(255,255,255,0.4)", fontSize: "0.875rem", mt: 0.25 }}>
+                        {loading ? "" : `${meetings.length} meeting${meetings.length !== 1 ? "s" : ""} recorded`}
+                    </Typography>
+                </Box>
+            </Box>
 
-                <Typography variant="h6" sx={{
-                  display: "flex", alignItems: "center",
-                  flexWrap: "wrap", gap: 1, mb: 2,
-                  fontSize: { xs: "0.95rem", sm: "1.1rem", md: "1.25rem" },
-                }}>
-                  🎥 Code:
-                  <Typography component="span" sx={{
-                    color: "#38bdf8", fontWeight: "bold",
-                    fontSize: "inherit", wordBreak: "break-all",
-                  }}>
-                    {meeting.meetingCode}
-                  </Typography>
-                </Typography>
+            {/* Loading */}
+            {loading && (
+                <Box sx={{ display: "flex", justifyContent: "center", mt: 8 }}>
+                    <CircularProgress sx={{ color: "#3b82f6" }} />
+                </Box>
+            )}
 
-                <Typography sx={{
-                  display: "flex", alignItems: "center", gap: 1, color: "#cbd5e1",
-                  fontSize: { xs: "0.85rem", sm: "1rem" },
-                }}>
-                  <CalendarMonthIcon fontSize="small" />
-                  {formatDate(meeting.date)}
-                </Typography>
-              </CardContent>
-            </Card>
-          ))}
+            {/* Empty */}
+            {!loading && meetings.length === 0 && (
+                <Box sx={{ textAlign: "center", mt: 10 }}>
+                    <VideocamIcon sx={{ fontSize: "4rem", color: "rgba(255,255,255,0.1)", mb: 2 }} />
+                    <Typography sx={{ color: "rgba(255,255,255,0.3)", fontSize: "1rem" }}>
+                        No meetings yet
+                    </Typography>
+                    <Typography sx={{ color: "rgba(255,255,255,0.18)", fontSize: "0.85rem", mt: 1 }}>
+                        Join or host a meeting to see it here
+                    </Typography>
+                </Box>
+            )}
+
+            {/* Meeting cards */}
+            {!loading && meetings.map((meeting, idx) => (
+                <Card key={meeting._id || idx} sx={cardSx} elevation={0}>
+                    <CardContent sx={{ display: "flex", alignItems: "center", gap: 2, p: "16px 20px !important" }}>
+                        {/* Icon */}
+                        <Box sx={{
+                            width: 44, height: 44, borderRadius: "12px",
+                            background: "rgba(59,130,246,0.15)", border: "1px solid rgba(59,130,246,0.25)",
+                            display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                        }}>
+                            <VideocamIcon sx={{ color: "#60a5fa", fontSize: "1.3rem" }} />
+                        </Box>
+
+                        {/* Info */}
+                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                            <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap" }}>
+                                <Typography sx={{
+                                    color: "#fff", fontWeight: 600, fontSize: "0.95rem",
+                                    fontFamily: "'Courier New',Courier,monospace", letterSpacing: "2px"
+                                }}>
+                                    {meeting.meetingCode}
+                                </Typography>
+                                <Chip label="Meeting" size="small" sx={{
+                                    background: "rgba(59,130,246,0.12)", color: "#93c5fd",
+                                    fontSize: "0.65rem", height: "20px", border: "1px solid rgba(59,130,246,0.2)"
+                                }} />
+                            </Box>
+                            <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mt: 0.5 }}>
+                                <CalendarTodayIcon sx={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.35)" }} />
+                                <Typography sx={{ color: "rgba(255,255,255,0.35)", fontSize: "0.78rem" }}>
+                                    {formatDate(meeting.date)}
+                                </Typography>
+                            </Box>
+                        </Box>
+
+                        {/* Actions */}
+                        <Box sx={{ display: "flex", gap: 1, flexShrink: 0 }}>
+                            {/* Copy code */}
+                            <Tooltip title={copiedId === meeting.meetingCode ? "Copied!" : "Copy code"} placement="top">
+                                <IconButton onClick={() => handleCopy(meeting.meetingCode)} size="small" sx={{
+                                    color: copiedId === meeting.meetingCode ? "#22c55e" : "rgba(255,255,255,0.4)",
+                                    background: "rgba(255,255,255,0.06)", borderRadius: "10px",
+                                    "&:hover": { background: "rgba(255,255,255,0.12)", color: "#fff" }
+                                }}>
+                                    <ContentCopyIcon sx={{ fontSize: "1rem" }} />
+                                </IconButton>
+                            </Tooltip>
+
+                            {/* NEW: Rejoin button */}
+                            <Tooltip title="Rejoin this meeting" placement="top">
+                                <IconButton onClick={() => handleRejoin(meeting.meetingCode)} size="small" sx={{
+                                    color: "#60a5fa",
+                                    background: "rgba(59,130,246,0.12)", borderRadius: "10px",
+                                    border: "1px solid rgba(59,130,246,0.2)",
+                                    "&:hover": { background: "rgba(59,130,246,0.25)", color: "#93c5fd" }
+                                }}>
+                                    <ReplayIcon sx={{ fontSize: "1rem" }} />
+                                </IconButton>
+                            </Tooltip>
+                        </Box>
+                    </CardContent>
+                </Card>
+            ))}
         </Box>
-      )}
-    </Box>
-  );
+    );
 }

@@ -5,6 +5,7 @@ import { Server } from "socket.io";
 import mongoose from "mongoose";
 import { connectToSocket } from "./controllers/socketManager.js";
 import cors from "cors";
+import rateLimit from "express-rate-limit";
 import userRoutes from "./routes/users.routes.js";
 
 const app    = express();
@@ -17,19 +18,16 @@ if (!process.env.MONGO_URI) {
 
 app.set("port", process.env.PORT || 8000);
 
-// FIXED CORS: allow both the deployed frontend AND localhost for development.
-// Previously only FRONTEND_URL was allowed, so any request from localhost:3000
-// was blocked by CORS before reaching any route handler.
+// CORS — allow deployed frontend + localhost for development
 const allowedOrigins = [
-    process.env.FRONTEND_URL,          // e.g. https://dconnectfrontend.onrender.com
+    process.env.FRONTEND_URL,
     "http://localhost:3000",
     "http://localhost:3001",
     "http://localhost:3003",
-].filter(Boolean); // remove undefined if FRONTEND_URL is not set
+].filter(Boolean);
 
 app.use(cors({
     origin: function (origin, callback) {
-        // Allow requests with no origin (mobile apps, Postman, curl, server-to-server)
         if (!origin) return callback(null, true);
         if (allowedOrigins.includes(origin)) return callback(null, true);
         return callback(new Error(`CORS: origin ${origin} not allowed`));
@@ -40,6 +38,18 @@ app.use(cors({
 
 app.use(express.json({ limit: "40kb" }));
 app.use(express.urlencoded({ limit: "40kb", extended: true }));
+
+// NEW: rate limiting on auth routes — max 20 attempts per 15 minutes
+// Run: npm install express-rate-limit
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,  // 15 minutes
+    max: 20,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { message: "Too many requests — please try again in 15 minutes" }
+});
+app.use("/api/v1/users/login",    authLimiter);
+app.use("/api/v1/users/register", authLimiter);
 
 app.use("/api/v1/users", userRoutes);
 
