@@ -1,4 +1,5 @@
 import React, { useContext, useEffect, useState } from "react";
+import withAuth from "../utils/withAuth";
 import { AuthContext } from "../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import {
@@ -11,7 +12,7 @@ import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import ReplayIcon      from "@mui/icons-material/Replay";
 import ArrowBackIcon   from "@mui/icons-material/ArrowBack";
 
-export default function History() {
+function History() {
     const { getHistoryOfUser } = useContext(AuthContext);
     const [meetings,   setMeetings]   = useState([]);
     const [loading,    setLoading]    = useState(true);
@@ -172,3 +173,5 @@ export default function History() {
         </Box>
     );
 }
+
+export default withAuth(History);  // FIX: protect history from unauthenticated access

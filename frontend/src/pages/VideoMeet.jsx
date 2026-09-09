@@ -170,9 +170,21 @@ export default function VideoMeetComponent() {
             if (timerRef.current)         clearInterval(timerRef.current);
             if (speakingInterval.current) clearInterval(speakingInterval.current);
             if (recordingRAFRef.current)  cancelAnimationFrame(recordingRAFRef.current);
+            if (qualityInterval.current)  clearInterval(qualityInterval.current);
             if (noiseAudioCtxRef.current) { try { noiseAudioCtxRef.current.close(); } catch(e) {} }
             if (recognitionRef.current)   { try { recognitionRef.current.onend = null; recognitionRef.current.stop(); } catch(e) {} }
             Object.values(analysersRef.current).forEach(({audioCtx}) => { try { audioCtx.close(); } catch(e) {} });
+            // FIX: properly disconnect socket and close all peer connections on unmount
+            // prevents memory leaks when user navigates away without clicking End Call
+            try {
+                if (socketRef.current) {
+                    socketRef.current.removeAllListeners();
+                    socketRef.current.disconnect();
+                }
+            } catch(e) {}
+            try {
+                Object.values(connections).forEach(pc => { try { pc.close(); } catch(e) {} });
+            } catch(e) {}
         };
     }, []);
 
@@ -642,17 +654,32 @@ export default function VideoMeetComponent() {
 
     // ── MEDIA ──────────────────────────────────────────────────────────────
     const getPermissions = async () => {
+        // FIX: single getUserMedia request instead of 3 separate calls.
+        // Multiple calls caused camera indicator flickering and redundant permission prompts.
         try {
-            const vp = await navigator.mediaDevices.getUserMedia({ video: true }); setVideoAvailable(!!vp);
-            const ap = await navigator.mediaDevices.getUserMedia({ audio: true }); setAudioAvailable(!!ap);
+            const qp = QUALITY_PRESETS[videoQuality] || QUALITY_PRESETS['720p'];
+            const stream = await navigator.mediaDevices.getUserMedia({ video: qp, audio: true });
+            setVideoAvailable(true);
+            setAudioAvailable(true);
             setScreenAvailable(!!navigator.mediaDevices.getDisplayMedia);
-            if (videoAvailable || audioAvailable) {
+            window.localStream = stream;
+            if (localVideoref.current) localVideoref.current.srcObject = stream;
+        } catch(e) {
+            // Single request failed — try video-only, then audio-only fallbacks
+            try {
                 const qp = QUALITY_PRESETS[videoQuality] || QUALITY_PRESETS['720p'];
-                const stream = await navigator.mediaDevices.getUserMedia({ video: videoAvailable ? qp : false, audio: audioAvailable });
-                if (stream) { window.localStream = stream; if (localVideoref.current) localVideoref.current.srcObject = stream; }
-            }
-            await enumerateDevices();
-        } catch(e) { console.log(e); }
+                const vs = await navigator.mediaDevices.getUserMedia({ video: qp });
+                setVideoAvailable(true);
+                window.localStream = vs;
+                if (localVideoref.current) localVideoref.current.srcObject = vs;
+            } catch(e2) { setVideoAvailable(false); }
+            try {
+                await navigator.mediaDevices.getUserMedia({ audio: true });
+                setAudioAvailable(true);
+            } catch(e2) { setAudioAvailable(false); }
+            setScreenAvailable(!!navigator.mediaDevices.getDisplayMedia);
+        }
+        await enumerateDevices();
     };
 
     useEffect(() => { if (video !== undefined && audio !== undefined) getUserMedia(); }, [video, audio]);
@@ -686,16 +713,33 @@ export default function VideoMeetComponent() {
     };
 
     const getUserMedia = () => {
+        // FIX: during screen share, toggling mic/cam must NOT replace the screen stream.
+        // Just toggle the audio track's enabled state and return early.
+        if (screenRef.current) {
+            if (window.localStream) {
+                window.localStream.getAudioTracks().forEach(t => { t.enabled = !!audioRef.current; });
+            }
+            return;
+        }
         if ((video && videoAvailable) || (audio && audioAvailable))
             navigator.mediaDevices.getUserMedia({ video, audio }).then(getUserMediaSuccess).catch(e => console.log(e));
         else try { localVideoref.current.srcObject.getTracks().forEach(t => t.stop()); } catch(e) {}
     };
 
     const getDislayMedia = () => {
-        if (screen && navigator.mediaDevices.getDisplayMedia)
-            navigator.mediaDevices.getDisplayMedia({ video: true, audio: true })
-            .then(getDislayMediaSuccess)
-            .catch(e => { console.log(e); setScreen(false); });
+        if (screen) {
+            // User started screen sharing
+            if (navigator.mediaDevices.getDisplayMedia)
+                navigator.mediaDevices.getDisplayMedia({ video: true, audio: true })
+                .then(getDislayMediaSuccess)
+                .catch(e => { console.log(e); setScreen(false); });
+        } else {
+            // FIX: screen share was stopped via the app button.
+            // Stopping the track fires onended which calls getUserMedia(), but
+            // calling getUserMedia() directly here ensures the camera is always
+            // restored even if onended doesn't fire (e.g. track already stopped).
+            getUserMedia();
+        }
     };
 
     const getDislayMediaSuccess = (stream) => {
