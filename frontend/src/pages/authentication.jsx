@@ -1,247 +1,164 @@
-import * as React from 'react';
-import Avatar from '@mui/material/Avatar';
-import Button from '@mui/material/Button';
-import CssBaseline from '@mui/material/CssBaseline';
-import TextField from '@mui/material/TextField';
-import FormControlLabel from '@mui/material/FormControlLabel';
-import Checkbox from '@mui/material/Checkbox';
-import Link from '@mui/material/Link';
-import Paper from '@mui/material/Paper';
-import Box from '@mui/material/Box';
-import Grid from '@mui/material/Grid';
-import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
-import Typography from '@mui/material/Typography';
-import { createTheme, ThemeProvider } from '@mui/material/styles';
-import { AuthContext } from '../contexts/AuthContext';
-import { Snackbar } from '@mui/material';
-
-const darkTheme = createTheme({
-    palette: {
-        mode: 'dark',
-        primary:    { main: '#3b82f6' },
-        secondary:  { main: '#8b5cf6' },
-        background: { default: 'rgb(1, 4, 48)', paper: 'rgba(255,255,255,0.04)' },
-    },
-    typography: {
-        fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-    },
-    shape: { borderRadius: 10 },
-});
-
-const fieldSx = {
-    '& .MuiOutlinedInput-root': {
-        color: '#fff', borderRadius: '10px',
-        '& fieldset':             { borderColor: 'rgba(255,255,255,0.14)' },
-        '&:hover fieldset':       { borderColor: 'rgba(255,255,255,0.3)'  },
-        '&.Mui-focused fieldset': { borderColor: '#3b82f6'                },
-    },
-    '& .MuiInputLabel-root':             { color: 'rgba(255,255,255,0.42)' },
-    '& .MuiInputLabel-root.Mui-focused': { color: '#3b82f6'                },
-};
+import React, { useContext, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import Avatar from "@mui/material/Avatar";
+import Button from "@mui/material/Button";
+import TextField from "@mui/material/TextField";
+import { LockOutlined } from "@mui/icons-material";
+import { AuthContext } from "../contexts/AuthContext";
 
 export default function Authentication() {
+    const navigate = useNavigate();
+    const { handleRegister, handleLogin } = useContext(AuthContext);
 
-    const [username,  setUsername]  = React.useState();
-    const [password,  setPassword]  = React.useState();
-    const [name,      setName]      = React.useState();
-    const [error,     setError]     = React.useState();
-    const [message,   setMessage]   = React.useState();
-    const [formState, setFormState] = React.useState(0);
-    const [open,      setOpen]      = React.useState(false);
-    const [isLoading, setIsLoading] = React.useState(false);
+    const [formState, setFormState] = useState(0); // 0 = login, 1 = register
+    const [name,      setName]      = useState("");
+    const [username,  setUsername]  = useState("");
+    const [password,  setPassword]  = useState("");
+    const [error,     setError]     = useState("");
+    const [message,   setMessage]   = useState("");
+    const [open,      setOpen]      = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
 
-    const { handleRegister, handleLogin } = React.useContext(AuthContext);
-
-    let handleAuth = async () => {
+    const handleAuth = async () => {
         setIsLoading(true);
+        setError("");
         try {
             if (formState === 0) {
-                let result = await handleLogin(username, password);
+                await handleLogin(username, password);
             }
             if (formState === 1) {
-                let result = await handleRegister(name, username, password);
-                console.log(result);
-                setUsername(""); setMessage(result); setOpen(true);
-                setError(""); setFormState(0); setPassword("");
+                const result = await handleRegister(name, username, password);
+                setMessage(result);
+                setOpen(true);
+                setUsername(""); setPassword(""); setName("");
+                setFormState(0);
             }
         } catch (err) {
-            console.log(err);
             const msg = err?.response?.data?.message
-                || (err.code === 'ECONNABORTED' ? "Server is waking up — please try again in 30 seconds." : "Server unreachable. Please try again.");
+                || (err.code === "ECONNABORTED"
+                    ? "Server is waking up — please try again in 30 seconds."
+                    : "Server unreachable. Please try again.");
             setError(msg);
         } finally {
             setIsLoading(false);
         }
     };
 
-    const toggleBtnSx = (active) => ({
-        borderRadius: '9px', py: 0.85,
-        textTransform: 'none', fontWeight: 600,
-        fontSize: { xs: '0.82rem', sm: '0.875rem' },
-        transition: 'all 0.2s',
-        ...(active ? {
-            background: '#3b82f6', color: '#fff',
-            boxShadow: '0 2px 10px rgba(59,130,246,0.4)',
-            '&:hover': { background: '#2563eb' },
-        } : {
-            color: 'rgba(255,255,255,0.45)',
-            '&:hover': { background: 'rgba(255,255,255,0.07)', color: '#fff' },
-        }),
-    });
-
-    const features = [
-        { icon: '🎥', text: 'Crystal-clear HD video & audio'     },
-        { icon: '💬', text: 'Real-time in-call chat & reactions'  },
-        { icon: '🖥️', text: 'One-click screen sharing'           },
-        { icon: '🔒', text: 'Secure, end-to-end encrypted calls'  },
-    ];
+    const inputSx = {
+        "& label.Mui-focused":             { color: "#6c63ff" },
+        "& .MuiOutlinedInput-root": {
+            "& fieldset":              { borderColor: "rgba(255,255,255,0.2)" },
+            "&:hover fieldset":        { borderColor: "rgba(255,255,255,0.4)" },
+            "&.Mui-focused fieldset":  { borderColor: "#6c63ff" },
+        },
+    };
 
     return (
-        <ThemeProvider theme={darkTheme}>
-            <Grid container component="main" sx={{ minHeight: '100vh' }}>
-                <CssBaseline />
+        <div style={{
+            minHeight: "100vh",
+            background: "linear-gradient(135deg,#0a0f2e 0%,#0d1b4b 50%,#0a0f2e 100%)",
+            display: "flex", fontFamily: "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif",
+        }}>
+            {/* Left panel */}
+            <div style={{ flex:1, display:"flex", flexDirection:"column", justifyContent:"center", padding:"60px 80px", color:"#fff" }}>
+                <h1 style={{ fontSize:"2.8rem", fontWeight:800, margin:"0 0 12px", letterSpacing:"-0.5px" }}>DConnect</h1>
+                <p style={{ fontSize:"1.1rem", color:"rgba(255,255,255,0.5)", margin:"0 0 48px", maxWidth:"380px", lineHeight:1.6 }}>HD video calls, right in your browser. No downloads, no sign-up friction.</p>
+                {[
+                    { icon:"🎥", text:"Crystal-clear HD video & audio"     },
+                    { icon:"💬", text:"Real-time in-call chat & reactions"  },
+                    { icon:"🖥️", text:"One-click screen sharing"            },
+                    { icon:"🔒", text:"Secure, end-to-end encrypted calls"  },
+                ].map((f,i) => (
+                    <div key={i} style={{ display:"flex", alignItems:"center", gap:"14px", marginBottom:"18px" }}>
+                        <div style={{ width:40, height:40, borderRadius:"12px", background:"rgba(255,255,255,0.07)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:"1.3rem", flexShrink:0 }}>{f.icon}</div>
+                        <span style={{ color:"rgba(255,255,255,0.65)", fontSize:"0.92rem" }}>{f.text}</span>
+                    </div>
+                ))}
+            </div>
 
-                {/* LEFT PANEL */}
-                <Grid item xs={false} sm={4} md={7} sx={{
-                    background: 'linear-gradient(135deg, rgb(1,4,48) 0%, rgb(6,14,65) 55%, rgb(2,7,52) 100%)',
-                    display: { xs: 'none', sm: 'flex' },
-                    flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                    position: 'relative', overflow: 'hidden', minHeight: '100vh',
-                }}>
-                    <Box sx={{
-                        position: 'absolute', width: 560, height: 560,
-                        borderRadius: '50%', top: -140, right: -140,
-                        background: 'radial-gradient(circle, rgba(59,130,246,0.08) 0%, transparent 70%)',
-                        border: '1px solid rgba(59,130,246,0.09)', pointerEvents: 'none',
-                    }} />
-                    <Box sx={{
-                        position: 'absolute', width: 380, height: 380,
-                        borderRadius: '50%', bottom: -100, left: -100,
-                        background: 'radial-gradient(circle, rgba(139,92,246,0.07) 0%, transparent 70%)',
-                        border: '1px solid rgba(139,92,246,0.07)', pointerEvents: 'none',
-                    }} />
-                    <Box sx={{ position: 'relative', textAlign: 'left', px: { sm: 4, md: 7 }, maxWidth: 480 }}>
-                        <Typography variant="h3" sx={{
-                            color: '#fff', fontWeight: 700, mb: 1, letterSpacing: '-0.5px',
-                            fontSize: { sm: '1.8rem', md: '2.5rem' },
-                        }}>
-                            DConnect
-                        </Typography>
-                        <Typography sx={{ color: 'rgba(255,255,255,0.4)', fontSize: { sm: '0.9rem', md: '1.05rem' }, mb: 5 }}>
-                            HD video calls, right in your browser
-                        </Typography>
-                        {features.map((f) => (
-                            <Box key={f.text} sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2.5 }}>
-                                <Box sx={{
-                                    width: 42, height: 42, borderRadius: '11px', flexShrink: 0,
-                                    background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.18)',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem',
-                                }}>
-                                    {f.icon}
-                                </Box>
-                                <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: { sm: '0.82rem', md: '0.9rem' } }}>
-                                    {f.text}
-                                </Typography>
-                            </Box>
-                        ))}
-                    </Box>
-                </Grid>
+            {/* Right panel — auth card */}
+            <div style={{ width:"460px", display:"flex", alignItems:"center", justifyContent:"center", padding:"40px 40px" }}>
+                <div style={{ background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.09)", borderRadius:"24px", padding:"40px 36px", width:"100%", backdropFilter:"blur(12px)", boxShadow:"0 24px 64px rgba(0,0,0,0.4)" }}>
 
-                {/* RIGHT PANEL */}
-                <Grid item xs={12} sm={8} md={5} sx={{
-                    background: 'rgb(1, 4, 48)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    minHeight: '100vh',
-                }}>
-                    <Box sx={{
-                        width: '100%', maxWidth: 420,
-                        mx: { xs: 2, sm: 3, md: 4 },
-                        p:  { xs: 3, sm: 3.5, md: 4 },
-                        background: 'rgba(255,255,255,0.04)',
-                        border: '1px solid rgba(255,255,255,0.09)',
-                        borderRadius: { xs: '16px', sm: '20px' },
-                        backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
-                    }}>
-                        <Avatar sx={{
-                            mb: 2.5, width: 44, height: 44,
-                            background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
-                            boxShadow: '0 4px 14px rgba(59,130,246,0.35)',
-                        }}>
-                            <LockOutlinedIcon sx={{ fontSize: '1.1rem' }} />
+                    <div style={{ display:"flex", justifyContent:"center", marginBottom:"20px" }}>
+                        <Avatar sx={{ background:"linear-gradient(135deg,#6c63ff,#3b82f6)", width:52, height:52 }}>
+                            <LockOutlined />
                         </Avatar>
+                    </div>
 
-                        <Typography variant="h5" sx={{
-                            color: '#fff', fontWeight: 700, mb: 0.5, letterSpacing: '-0.2px',
-                            fontSize: { xs: '1.2rem', sm: '1.4rem', md: '1.5rem' },
-                        }}>
-                            {formState === 0 ? 'Welcome back' : 'Create account'}
-                        </Typography>
-                        <Typography sx={{
-                            color: 'rgba(255,255,255,0.38)',
-                            fontSize: { xs: '0.8rem', sm: '0.875rem' }, mb: 3,
-                        }}>
-                            {formState === 0 ? 'Sign in to continue to DConnect' : 'Join DConnect today'}
-                        </Typography>
+                    <h2 style={{ color:"#fff", fontWeight:700, fontSize:"1.4rem", textAlign:"center", margin:"0 0 4px", letterSpacing:"-0.2px" }}>
+                        {formState === 0 ? "Welcome back" : "Create account"}
+                    </h2>
+                    <p style={{ color:"rgba(255,255,255,0.4)", textAlign:"center", margin:"0 0 28px", fontSize:"0.875rem" }}>
+                        {formState === 0 ? "Sign in to continue to DConnect" : "Join DConnect for free"}
+                    </p>
 
-                        <Box sx={{
-                            display: 'flex', p: '4px',
-                            background: 'rgba(255,255,255,0.06)',
-                            borderRadius: '12px', mb: 3,
-                            border: '1px solid rgba(255,255,255,0.08)',
-                        }}>
-                            <Button fullWidth onClick={() => { setFormState(0) }} sx={toggleBtnSx(formState === 0)}>Sign In</Button>
-                            <Button fullWidth onClick={() => { setFormState(1) }} sx={toggleBtnSx(formState === 1)}>Sign Up</Button>
-                        </Box>
+                    {/* Tab switcher */}
+                    <div style={{ display:"flex", background:"rgba(255,255,255,0.06)", borderRadius:"12px", padding:"4px", marginBottom:"24px", gap:"4px" }}>
+                        {["Sign In","Sign Up"].map((label,i) => (
+                            <button key={i} onClick={()=>{setFormState(i);setError("");}} style={{ flex:1, padding:"10px", border:"none", borderRadius:"9px", cursor:"pointer", fontWeight:600, fontSize:"0.875rem", fontFamily:"inherit", transition:"all 0.2s", background:formState===i?"rgba(255,255,255,0.12)":"transparent", color:formState===i?"#fff":"rgba(255,255,255,0.45)" }}>{label}</button>
+                        ))}
+                    </div>
 
-                        <Box component="form" noValidate sx={{ mt: 0 }}>
-                            {formState === 1 ? (
-                                <TextField margin="normal" required fullWidth id="username"
-                                    label="Full Name" name="username" value={name} autoFocus
-                                    onChange={(e) => setName(e.target.value)} sx={fieldSx} />
-                            ) : <></>}
+                    {/* Fields */}
+                    {formState === 1 && (
+                        <TextField fullWidth label="Full Name" value={name} onChange={e=>{setName(e.target.value);setError("");}} variant="outlined" margin="normal"
+                            sx={{"& label":{color:"rgba(255,255,255,0.5)"},"& .MuiInputBase-input":{color:"#fff"},...inputSx}}
+                        />
+                    )}
+                    <TextField fullWidth label="Username" value={username} onChange={e=>{setUsername(e.target.value);setError("");}} variant="outlined" margin="normal"
+                        sx={{"& label":{color:"rgba(255,255,255,0.5)"},"& .MuiInputBase-input":{color:"#fff"},...inputSx}}
+                    />
+                    <TextField fullWidth label="Password" type="password" value={password}
+                        onChange={e=>{setPassword(e.target.value);setError("");}}
+                        onKeyDown={e=>e.key==="Enter"&&!isLoading&&handleAuth()}
+                        variant="outlined" margin="normal"
+                        sx={{"& label":{color:"rgba(255,255,255,0.5)"},"& .MuiInputBase-input":{color:"#fff"},...inputSx}}
+                    />
 
-                            <TextField margin="normal" required fullWidth id="username"
-                                label="Username" name="username" value={username} autoFocus
-                                onChange={(e) => setUsername(e.target.value)} sx={fieldSx} />
+                    {error && (
+                        <div style={{ background:"rgba(239,68,68,0.12)", border:"1px solid rgba(239,68,68,0.3)", borderRadius:"10px", padding:"10px 14px", marginTop:"12px", color:"#fca5a5", fontSize:"0.82rem" }}>
+                            {error}
+                        </div>
+                    )}
+                    {open && message && (
+                        <div style={{ background:"rgba(34,197,94,0.1)", border:"1px solid rgba(34,197,94,0.25)", borderRadius:"10px", padding:"10px 14px", marginTop:"12px", color:"#86efac", fontSize:"0.82rem" }}>
+                            {message}
+                        </div>
+                    )}
 
-                            <TextField margin="normal" required fullWidth name="password"
-                                label="Password" value={password} type="password"
-                                onChange={(e) => setPassword(e.target.value)} id="password" sx={fieldSx} />
+                    <Button fullWidth variant="contained" onClick={handleAuth} disabled={isLoading}
+                        sx={{ mt:3, py:1.5, background:"linear-gradient(135deg,#6c63ff,#3b82f6)", "&:hover":{background:"linear-gradient(135deg,#5b52ee,#2563eb)"}, "&.Mui-disabled":{background:"rgba(255,255,255,0.07)",color:"rgba(255,255,255,0.25)"}, borderRadius:"10px", textTransform:"none", fontWeight:700, fontSize:"1rem", boxShadow:"none" }}
+                    >
+                        {isLoading ? (formState===0?"Signing in...":"Creating account...") : (formState===0?"Sign In":"Create Account")}
+                    </Button>
 
-                            {error ? (
-                                <Box sx={{
-                                    mt: 1.5, px: 2, py: 1,
-                                    background: 'rgba(239,68,68,0.1)',
-                                    border: '1px solid rgba(239,68,68,0.28)', borderRadius: '8px',
-                                }}>
-                                    <Typography sx={{ color: '#fca5a5', fontSize: '0.8rem' }}>{error}</Typography>
-                                </Box>
-                            ) : (
-                                <p style={{ color: 'red', margin: 0 }}></p>
-                            )}
-
-                            <Button type="button" fullWidth variant="contained"
-                                sx={{
-                                    mt: 3, mb: 2, py: { xs: 1.2, sm: 1.45 },
-                                    background: '#3b82f6', '&:hover': { background: '#2563eb' },
-                                    borderRadius: '10px', fontSize: { xs: '0.9rem', sm: '0.95rem' },
-                                    fontWeight: 600, textTransform: 'none', letterSpacing: 0,
-                                    boxShadow: '0 4px 18px rgba(59,130,246,0.35)',
-                                }}
-                                onClick={handleAuth}
-                                disabled={isLoading}
+                    {/* #12: Forgot password link */}
+                    {formState === 0 && (
+                        <div style={{ textAlign:"center", marginTop:"16px" }}>
+                            <button onClick={()=>navigate("/forgot-password")} style={{ background:"none", border:"none", color:"rgba(255,255,255,0.35)", fontSize:"0.82rem", cursor:"pointer", fontFamily:"inherit", transition:"color 0.15s" }}
+                                onMouseOver={e=>e.target.style.color="rgba(255,255,255,0.7)"}
+                                onMouseOut={e=>e.target.style.color="rgba(255,255,255,0.35)"}
                             >
-                                {isLoading
-                                    ? (formState === 0 ? 'Signing in...' : 'Creating account...')
-                                    : (formState === 0 ? 'Sign In' : 'Create Account')
-                                }
-                            </Button>
-                        </Box>
-                    </Box>
-                </Grid>
-            </Grid>
+                                Forgot your password?
+                            </button>
+                        </div>
+                    )}
 
-            <Snackbar open={open} autoHideDuration={4000} message={message} />
-        </ThemeProvider>
+                    {/* Guest access */}
+                    <div style={{ display:"flex", alignItems:"center", gap:"12px", margin:"20px 0 16px" }}>
+                        <div style={{ flex:1, height:"1px", background:"rgba(255,255,255,0.08)" }}></div>
+                        <span style={{ color:"rgba(255,255,255,0.25)", fontSize:"0.75rem" }}>or</span>
+                        <div style={{ flex:1, height:"1px", background:"rgba(255,255,255,0.08)" }}></div>
+                    </div>
+                    <button onClick={()=>navigate("/guest")} style={{ width:"100%", padding:"12px", background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:"10px", color:"rgba(255,255,255,0.6)", fontSize:"0.875rem", cursor:"pointer", fontFamily:"inherit", transition:"all 0.2s", fontWeight:500 }}
+                        onMouseOver={e=>{e.target.style.background="rgba(255,255,255,0.09)";e.target.style.color="#fff";}}
+                        onMouseOut={e=>{e.target.style.background="rgba(255,255,255,0.05)";e.target.style.color="rgba(255,255,255,0.6)";}}
+                    >
+                        Continue as Guest
+                    </button>
+                </div>
+            </div>
+        </div>
     );
 }
