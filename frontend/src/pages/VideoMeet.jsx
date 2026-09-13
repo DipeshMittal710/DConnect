@@ -40,21 +40,48 @@ const QUALITY_PRESETS = {
     '1080p': { width:1920, height:1080, frameRate:30 },
 };
 
-// FIX #5: TURN server via env vars
-// Add to frontend .env:
-//   REACT_APP_TURN_URL=turn:openrelay.metered.ca:80
-//   REACT_APP_TURN_USERNAME=your_user
-//   REACT_APP_TURN_CREDENTIAL=your_cred
+// TURN server configuration.
+// Same-network calls work with STUN alone.
+// Cross-network calls (phone on LTE ↔ laptop on WiFi) REQUIRE a TURN relay.
+//
+// Option A — instant, no sign-up (public OpenRelay, good for demos):
+//   Leave env vars empty — the public relay below is used automatically.
+//
+// Option B — private credentials (recommended for production):
+//   Sign up free at https://dashboard.metered.ca, then add to frontend .env:
+//     REACT_APP_TURN_URL=turn:YOURREGION.relay.metered.ca:80
+//     REACT_APP_TURN_URL_2=turn:YOURREGION.relay.metered.ca:443?transport=tcp
+//     REACT_APP_TURN_USERNAME=your_username
+//     REACT_APP_TURN_CREDENTIAL=your_credential
 const buildIceServers = () => {
-    const s = [{ urls:'stun:stun.l.google.com:19302' }];
+    const customUser = process.env.REACT_APP_TURN_USERNAME;
+    const customCred = process.env.REACT_APP_TURN_CREDENTIAL;
+    const servers = [
+        // Multiple Google STUN servers for faster ICE gathering
+        { urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302', 'stun:stun2.l.google.com:19302'] },
+        // Public OpenRelay TURN — works out of the box for demos/student projects
+        // Handles phone-on-LTE ↔ laptop-on-WiFi and all other cross-NAT scenarios
+        {
+            urls: [
+                'turn:openrelay.metered.ca:80',
+                'turn:openrelay.metered.ca:443',
+                'turn:openrelay.metered.ca:443?transport=tcp',
+                'turn:openrelay.metered.ca:80?transport=tcp',
+            ],
+            username:   customUser || 'openrelayproject',
+            credential: customCred || 'openrelayproject',
+        },
+    ];
+    // Override / add private TURN if env vars are set
     if (process.env.REACT_APP_TURN_URL) {
-        s.push({ urls:process.env.REACT_APP_TURN_URL, username:process.env.REACT_APP_TURN_USERNAME||'', credential:process.env.REACT_APP_TURN_CREDENTIAL||'' });
-        if (process.env.REACT_APP_TURN_URL_2)
-            s.push({ urls:process.env.REACT_APP_TURN_URL_2, username:process.env.REACT_APP_TURN_USERNAME||'', credential:process.env.REACT_APP_TURN_CREDENTIAL||'' });
+        servers.push({ urls: process.env.REACT_APP_TURN_URL, username: customUser || '', credential: customCred || '' });
     }
-    return s;
+    if (process.env.REACT_APP_TURN_URL_2) {
+        servers.push({ urls: process.env.REACT_APP_TURN_URL_2, username: customUser || '', credential: customCred || '' });
+    }
+    return servers;
 };
-const peerConfig = { iceServers: buildIceServers() };
+const peerConfig = { iceServers: buildIceServers(), iceCandidatePoolSize: 10 };
 
 // module-level peer connections map
 const connections = {};
@@ -315,12 +342,21 @@ export default function VideoMeetComponent() {
 
     // FIX #3 + #7: Create a black video track for when camera is off
     // Remote peers see black frames instead of a frozen last frame
+    // FIX: keep canvas in a ref so it's not garbage-collected — GC'd canvas
+    // stops sending frames and the remote peer sees a frozen black screen
     const createBlackVideoTrack = () => {
-        const canvas = document.createElement('canvas');
-        canvas.width = 640; canvas.height = 480;
-        canvas.getContext('2d').fillRect(0,0,640,480);
-        const stream = canvas.captureStream(5);
-        return stream.getVideoTracks()[0];
+        if (blackTrackInterval.current) { clearInterval(blackTrackInterval.current); blackTrackInterval.current = null; }
+        if (!blackCanvasRef.current) {
+            blackCanvasRef.current = document.createElement('canvas');
+            blackCanvasRef.current.width = 640; blackCanvasRef.current.height = 480;
+        }
+        const ctx = blackCanvasRef.current.getContext('2d');
+        ctx.fillStyle = '#000'; ctx.fillRect(0, 0, 640, 480);
+        // Re-draw periodically — canvas.captureStream needs activity to keep sending
+        blackTrackInterval.current = setInterval(() => {
+            ctx.fillStyle = '#000'; ctx.fillRect(0, 0, 640, 480);
+        }, 100);
+        return blackCanvasRef.current.captureStream(10).getVideoTracks()[0];
     };
 
     const createSilenceTrack = () => {
