@@ -118,6 +118,9 @@ export default function VideoMeetComponent() {
 
     const videoRef = useRef([]);
 
+    const blackCanvasRef = useRef(null);
+const blackTrackInterval = useRef(null);
+
     // ── STATE ──────────────────────────────────────────────────────────────
     const [videoAvailable,   setVideoAvailable]   = useState(true);
     const [audioAvailable,   setAudioAvailable]   = useState(true);
